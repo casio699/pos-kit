@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuth } from '../store/auth'
 import { login, register } from '../api/client'
-import { Eye, EyeOff, Store, ShoppingCart, Package, CreditCard, Users, TrendingUp, Lock, Mail, User, AlertCircle, CheckCircle } from 'lucide-react'
+import { Eye, EyeOff, Store, Package, CreditCard, Users, TrendingUp, Lock, Mail, User, AlertCircle, CheckCircle } from 'lucide-react'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -76,9 +76,7 @@ export default function Login() {
         password, 
         first_name: firstName, 
         last_name: lastName, 
-        tenant_id: tenantId,
-        role: selectedRole,
-        store_location: storeLocation
+        tenant_id: tenantId
       })
       setSuccess('Registration successful! Logging you in...')
       
