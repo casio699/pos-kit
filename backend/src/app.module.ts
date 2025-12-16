@@ -38,7 +38,7 @@ import { AuditController } from './audit/audit.controller';
       entities: ['dist/**/*.entity{.ts,.js}'],
       migrations: ['dist/database/migrations/*{.ts,.js}'],
       migrationsTableName: 'typeorm_migrations',
-      synchronize: true,
+      synchronize: false,
       autoLoadEntities: true,
       logging: process.env.NODE_ENV === 'development',
       poolSize: parseInt(process.env.DATABASE_POOL_SIZE || '20'),
