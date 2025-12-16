@@ -6,6 +6,7 @@ import { RbacService, DefaultRole, Permission } from './rbac.service';
 import { Role } from './entities/role.entity';
 import { User } from '../auth/entities/user.entity';
 import { CreateRoleDto, UpdateRoleDto, AssignRoleDto } from './dto/role.dto';
+import { Audit } from '../audit/decorators/audit.decorator';
 
 interface UserWithRoles extends Omit<User, 'roles'> {
   roles: Role[];
@@ -33,12 +34,25 @@ export class RbacController {
   }
 
   @Post('roles')
+  @Audit({
+    action: 'ROLE_CREATE',
+    resourceType: 'role',
+    getResourceId: (args) => args[1]?.id,
+    getNewData: (args) => ({ name: args[0]?.name, permissions: args[0]?.permissions }),
+  })
   async createRole(@Body() createRoleDto: CreateRoleDto, @Request() req: any): Promise<Role> {
     const tenantId = req.user.tenantId || req.user.tenant_id;
     return this.rbacService.createRole(createRoleDto, tenantId);
   }
 
   @Put('roles/:roleId')
+  @Audit({
+    action: 'ROLE_UPDATE',
+    resourceType: 'role',
+    getResourceId: (args) => args[0],
+    getOldData: (args) => ({ /* old data would be fetched from service */ }),
+    getNewData: (args) => args[1],
+  })
   async updateRole(
     @Param('roleId') roleId: string,
     @Body() updateRoleDto: UpdateRoleDto,
@@ -47,6 +61,11 @@ export class RbacController {
   }
 
   @Delete('roles/:roleId')
+  @Audit({
+    action: 'ROLE_DELETE',
+    resourceType: 'role',
+    getResourceId: (args) => args[0],
+  })
   async deleteRole(@Param('roleId') roleId: string): Promise<void> {
     return this.rbacService.deleteRole(roleId);
   }
@@ -71,6 +90,12 @@ export class RbacController {
   }
 
   @Post('users/:userId/roles')
+  @Audit({
+    action: 'USER_ROLE_ASSIGN',
+    resourceType: 'user_role',
+    getResourceId: (args) => `${args[0]}-${args[1]?.roleId}`,
+    getNewData: (args) => ({ userId: args[0], roleId: args[1]?.roleId }),
+  })
   async assignRole(
     @Param('userId') userId: string,
     @Body() assignRoleDto: AssignRoleDto,
@@ -81,6 +106,12 @@ export class RbacController {
   }
 
   @Delete('users/:userId/roles/:roleId')
+  @Audit({
+    action: 'USER_ROLE_REMOVE',
+    resourceType: 'user_role',
+    getResourceId: (args) => `${args[0]}-${args[1]}`,
+    getOldData: (args) => ({ userId: args[0], roleId: args[1] }),
+  })
   async removeRole(
     @Param('userId') userId: string,
     @Param('roleId') roleId: string,

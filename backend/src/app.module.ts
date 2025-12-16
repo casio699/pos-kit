@@ -17,6 +17,10 @@ import { HealthController } from './health.controller';
 import { PaymentsModule } from './payments/payments.module';
 import { ShopifyModule } from './shopify/shopify.module';
 import { RbacModule } from './rbac/rbac.module';
+import { AuditModule } from './audit/audit.module';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { AuditInterceptor } from './audit/interceptors/audit.interceptor';
+import { AuditController } from './audit/audit.controller';
 
 @Module({
   imports: [
@@ -54,7 +58,14 @@ import { RbacModule } from './rbac/rbac.module';
     PaymentsModule,
     ShopifyModule,
     RbacModule,
+    AuditModule,
   ],
-  controllers: [HealthController],
+  controllers: [HealthController, AuditController],
+  providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditInterceptor,
+    },
+  ],
 })
 export class AppModule {}

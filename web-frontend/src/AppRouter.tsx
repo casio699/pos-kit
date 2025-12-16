@@ -11,6 +11,7 @@ const Sales = React.lazy(() => import('./pages/Sales'))
 const Payments = React.lazy(() => import('./pages/Payments'))
 const Shopify = React.lazy(() => import('./pages/Shopify'))
 const RBAC = React.lazy(() => import('./pages/RBAC'))
+const Audit = React.lazy(() => import('./pages/Audit'))
 
 function ProtectedRoute({ children }: { children: React.ReactElement }) {
   const { token } = useAuth()
@@ -74,6 +75,14 @@ export default function AppRouter() {
               element={
                 <ProtectedRoute>
                   <RBAC />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/audit"
+              element={
+                <ProtectedRoute>
+                  <Audit />
                 </ProtectedRoute>
               }
             />
