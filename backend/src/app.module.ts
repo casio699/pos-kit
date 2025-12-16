@@ -14,6 +14,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
 import { SyncModule } from './sync/sync.module';
 import { CommonModule } from './common/common.module';
 import { HealthController } from './health.controller';
+import { PaymentsModule } from './payments/payments.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { HealthController } from './health.controller';
     DevicesModule,
     WebhooksModule,
     SyncModule,
+    PaymentsModule,
   ],
   controllers: [HealthController],
 })
