@@ -3,6 +3,7 @@ import {
   NestInterceptor,
   ExecutionContext,
   CallHandler,
+  Logger,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
@@ -13,6 +14,8 @@ import { AUDIT_KEY, AuditOptions } from '../decorators/audit.decorator';
 
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {
+  private readonly logger = new Logger(AuditInterceptor.name);
+
   constructor(
     private reflector: Reflector,
     private auditService: AuditService,
@@ -28,6 +31,8 @@ export class AuditInterceptor implements NestInterceptor {
       return next.handle();
     }
 
+    this.logger.log(`Audit interceptor triggered for action: ${auditOptions.action}`);
+
     const request = context.switchToHttp().getRequest<Request>();
     const user = request.user as any;
 
@@ -37,10 +42,12 @@ export class AuditInterceptor implements NestInterceptor {
       tap({
         next: (response) => {
           // Log successful action
+          this.logger.log(`Successful action: ${auditOptions.action}`);
           this.logAction(auditOptions, request, user, true, null, startTime);
         },
         error: (error) => {
           // Log failed action
+          this.logger.log(`Failed action: ${auditOptions.action} - ${error.message}`);
           this.logAction(auditOptions, request, user, false, error.message, startTime);
         },
       }),
@@ -56,33 +63,42 @@ export class AuditInterceptor implements NestInterceptor {
     startTime: number,
   ) {
     if (!user || !user.id) {
+      this.logger.warn('No user found in request, skipping audit log');
       return; // Don't log anonymous requests
     }
 
-    const resourceId = auditOptions.getResourceId
-      ? auditOptions.getResourceId(request.body || request.params)
-      : null;
+    try {
+      const resourceId = auditOptions.getResourceId
+        ? auditOptions.getResourceId([request.body, request.params])
+        : null;
 
-    const oldData = auditOptions.getOldData
-      ? auditOptions.getOldData(request.body || request.params)
-      : null;
+      const oldData = auditOptions.getOldData
+        ? auditOptions.getOldData([request.body, request.params])
+        : null;
 
-    const newData = auditOptions.getNewData
-      ? auditOptions.getNewData(request.body || request.params)
-      : null;
+      const newData = auditOptions.getNewData
+        ? auditOptions.getNewData([request.body, request.params])
+        : null;
 
-    await this.auditService.log({
-      userId: user.id,
-      tenantId: user.tenant_id || user.tenantId,
-      action: auditOptions.action,
-      resourceType: auditOptions.resourceType,
-      resourceId: resourceId || undefined,
-      oldValues: oldData,
-      newValues: newData,
-      ipAddress: request.ip || request.connection.remoteAddress,
-      userAgent: request.get('User-Agent'),
-      success,
-      errorMessage: errorMessage || undefined,
-    });
+      this.logger.log(`Creating audit log for user ${user.id}, action ${auditOptions.action}`);
+
+      await this.auditService.log({
+        userId: user.id,
+        tenantId: user.tenant_id || user.tenantId,
+        action: auditOptions.action,
+        resourceType: auditOptions.resourceType,
+        resourceId: resourceId || undefined,
+        oldValues: oldData,
+        newValues: newData,
+        ipAddress: request.ip || request.connection.remoteAddress,
+        userAgent: request.get('User-Agent'),
+        success,
+        errorMessage: errorMessage || undefined,
+      });
+
+      this.logger.log(`Audit log created successfully`);
+    } catch (error) {
+      this.logger.error('Failed to create audit log:', error);
+    }
   }
 }

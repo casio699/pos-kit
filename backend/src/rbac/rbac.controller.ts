@@ -19,6 +19,10 @@ export class RbacController {
   constructor(private readonly rbacService: RbacService) {}
 
   @Post('initialize-roles')
+  @Audit({
+    action: 'ROLES_INITIALIZE',
+    resourceType: 'system',
+  })
   async initializeRoles(@Request() req: any) {
     const tenantId = req.user.tenantId || req.user.tenant_id;
     console.log('RBAC: Received tenantId:', tenantId);

@@ -42,6 +42,15 @@ export class AuditLog {
   @Column({ nullable: true })
   error_message: string;
 
+  @Column({ nullable: true })
+  entity_type: string;
+
+  @Column('uuid', { nullable: true })
+  entity_id: string;
+
+  @Column({ nullable: true })
+  status: string;
+
   @CreateDateColumn()
   created_at: Date;
 }
