@@ -16,6 +16,7 @@ import { CommonModule } from './common/common.module';
 import { HealthController } from './health.controller';
 import { PaymentsModule } from './payments/payments.module';
 import { ShopifyModule } from './shopify/shopify.module';
+import { RbacModule } from './rbac/rbac.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { ShopifyModule } from './shopify/shopify.module';
     SyncModule,
     PaymentsModule,
     ShopifyModule,
+    RbacModule,
   ],
   controllers: [HealthController],
 })

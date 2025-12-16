@@ -83,3 +83,61 @@ export const shopifyApi = {
   getProducts: () => api.get('/shopify/products'),
   getSyncStatus: () => api.get('/shopify/sync/status'),
 }
+
+export const rbacApi = {
+  listRoles: () => api.get('/rbac/roles'),
+  createRole: (roleData: any) => api.post('/rbac/roles', roleData),
+  updateRole: (roleId: string, updates: any) => api.put(`/rbac/roles/${roleId}`, updates),
+  deleteRole: (roleId: string) => api.delete(`/rbac/roles/${roleId}`),
+  listUsers: () => api.get('/rbac/users'),
+  assignRole: (userId: string, data: { roleId: string }) => 
+    api.post(`/rbac/users/${userId}/roles`, data),
+  removeRole: (userId: string, roleId: string) => 
+    api.delete(`/rbac/users/${userId}/roles/${roleId}`),
+  getUserRoles: (userId: string) => api.get(`/rbac/users/${userId}/roles`),
+  getUserPermissions: (userId: string) => api.get(`/rbac/users/${userId}/permissions`),
+  listPermissions: () => api.get('/rbac/permissions'),
+  initializeRoles: () => api.post('/rbac/initialize-roles'),
+}
+
+// Create a unified client object
+export const apiClient = {
+  // Auth
+  register,
+  login,
+  
+  // Products
+  listProducts,
+  createProduct,
+  
+  // Inventory
+  listInventory,
+  adjustInventory,
+  
+  // Locations
+  createLocation,
+  listLocations,
+  
+  // Sales
+  createSale,
+  listSales,
+  
+  // APIs
+  salesApi,
+  paymentApi,
+  shopifyApi,
+  rbacApi,
+  
+  // RBAC direct methods
+  listRoles: rbacApi.listRoles,
+  createRole: rbacApi.createRole,
+  updateRole: rbacApi.updateRole,
+  deleteRole: rbacApi.deleteRole,
+  listUsers: rbacApi.listUsers,
+  assignRole: rbacApi.assignRole,
+  removeRole: rbacApi.removeRole,
+  getUserRoles: rbacApi.getUserRoles,
+  getUserPermissions: rbacApi.getUserPermissions,
+  listPermissions: rbacApi.listPermissions,
+  initializeRoles: rbacApi.initializeRoles,
+}

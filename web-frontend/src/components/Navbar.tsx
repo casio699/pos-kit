@@ -25,6 +25,7 @@ export default function Navbar() {
         <Link to="/sales" className={linkClass('/sales')}>Sales</Link>
         <Link to="/payments" className={linkClass('/payments')}>Payments</Link>
         <Link to="/shopify" className={linkClass('/shopify')}>Shopify</Link>
+        <Link to="/rbac" className={linkClass('/rbac')}>RBAC</Link>
         <Link to="/tester" className={linkClass('/tester')}>API Tester</Link>
       </div>
       <div className="flex items-center gap-3">
