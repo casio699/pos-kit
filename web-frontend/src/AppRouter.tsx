@@ -54,7 +54,15 @@ export default function AppRouter() {
           <Routes>
             <Route 
               path="/login" 
-              element={!token ? <Login /> : <Navigate to="/dashboard" replace />} 
+              element={
+                !token ? (
+                  <Login />
+                ) : localStorage.getItem('pos-onboarding-active') ? (
+                  <Login />
+                ) : (
+                  <Navigate to="/dashboard" replace />
+                )
+              } 
             />
             <Route
               path="/dashboard"
