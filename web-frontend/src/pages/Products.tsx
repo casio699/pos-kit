@@ -40,10 +40,22 @@ export default function Products() {
       const response = await fetch('http://localhost:3000/products', {
         headers: { Authorization: `Bearer ${token}` },
       })
+      
+      if (!response.ok) {
+        if (response.status === 403) {
+          // New tenant - no products yet
+          setProducts([])
+        } else {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        return
+      }
+      
       const data = await response.json()
-      setProducts(data)
+      setProducts(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error('Failed to load products:', error)
+      setProducts([]) // Ensure products is always an array
     } finally {
       setLoading(false)
     }
@@ -81,7 +93,7 @@ export default function Products() {
     }
   }
 
-  const filteredAndSortedProducts = products
+  const filteredAndSortedProducts = (products || [])
     .filter(product => {
       const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
