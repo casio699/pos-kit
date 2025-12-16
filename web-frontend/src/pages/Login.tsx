@@ -1,89 +1,486 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { useAuth } from '../store/auth'
 import { login, register } from '../api/client'
+import { Eye, EyeOff, Store, ShoppingCart, Package, CreditCard, Users, TrendingUp, Lock, Mail, User, AlertCircle, CheckCircle } from 'lucide-react'
 
 export default function Login() {
   const navigate = useNavigate()
   const location = useLocation() as any
   const { tenantId, setToken, setEmail } = useAuth()
 
-  const [email, setEmailInput] = useState(`user-${Date.now()}@example.com`)
-  const [password, setPassword] = useState('Test123!@#')
-  const [firstName, setFirstName] = useState('Test')
-  const [lastName, setLastName] = useState('User')
+  const [email, setEmailInput] = useState('')
+  const [password, setPassword] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
+  const [isRegisterMode, setIsRegisterMode] = useState(false)
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+
+  // POS features
+  const [selectedRole, setSelectedRole] = useState<'cashier' | 'manager' | 'admin'>('cashier')
+  const [storeLocation, setStoreLocation] = useState('')
+
+  const storeLocations = [
+    'Main Store - Downtown',
+    'Branch A - North Side', 
+    'Branch B - West Mall',
+    'Warehouse - Industrial',
+    'Pop-up Store - Central'
+  ]
+
+  const roles = [
+    { id: 'cashier', name: 'Cashier', icon: <CreditCard className="w-4 h-4" />, description: 'Process sales and manage daily transactions' },
+    { id: 'manager', name: 'Store Manager', icon: <Users className="w-4 h-4" />, description: 'Manage inventory, staff, and reports' },
+    { id: 'admin', name: 'System Admin', icon: <Store className="w-4 h-4" />, description: 'Full system access and configuration' }
+  ]
 
   const goNext = () => {
     const from = location.state?.from?.pathname || '/products'
     navigate(from, { replace: true })
   }
 
+  const validateForm = () => {
+    const errors: Record<string, string> = {}
+    
+    if (!email) errors.email = 'Email is required'
+    else if (!/\S+@\S+\.\S+/.test(email)) errors.email = 'Invalid email format'
+    
+    if (!password) errors.password = 'Password is required'
+    else if (password.length < 6) errors.password = 'Password must be at least 6 characters'
+    
+    if (isRegisterMode) {
+      if (!firstName) errors.firstName = 'First name is required'
+      if (!lastName) errors.lastName = 'Last name is required'
+      if (!storeLocation) errors.storeLocation = 'Store location is required'
+    }
+    
+    setFormErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
   const handleRegister = async () => {
+    if (!validateForm()) return
+    
     setLoading(true)
     setError(null)
+    setSuccess(null)
     try {
-      await register({ email, password, first_name: firstName, last_name: lastName, tenant_id: tenantId })
-      const res = await login({ email, password })
-      setToken(res.access_token)
-      setEmail(email)
-      goNext()
+      await register({ 
+        email, 
+        password, 
+        first_name: firstName, 
+        last_name: lastName, 
+        tenant_id: tenantId,
+        role: selectedRole,
+        store_location: storeLocation
+      })
+      setSuccess('Registration successful! Logging you in...')
+      
+      // Auto-login after successful registration
+      setTimeout(async () => {
+        try {
+          const res = await login({ email, password })
+          setToken(res.access_token)
+          setEmail(email)
+          
+          // Store remember me preference
+          if (rememberMe) {
+            localStorage.setItem('pos-remember-email', email)
+          }
+          
+          goNext()
+        } catch (loginError: any) {
+          setError('Registration successful but login failed. Please try logging in manually.')
+        }
+      }, 1500)
     } catch (e: any) {
-      setError(e.response?.data?.message || e.message)
+      setError(e.response?.data?.message || e.message || 'Registration failed')
     } finally {
       setLoading(false)
     }
   }
 
   const handleLogin = async () => {
+    if (!validateForm()) return
+    
     setLoading(true)
     setError(null)
+    setSuccess(null)
     try {
       const res = await login({ email, password })
       setToken(res.access_token)
       setEmail(email)
-      goNext()
+      setSuccess('Login successful! Redirecting...')
+      
+      // Store remember me preference
+      if (rememberMe) {
+        localStorage.setItem('pos-remember-email', email)
+      } else {
+        localStorage.removeItem('pos-remember-email')
+      }
+      
+      setTimeout(goNext, 1000)
     } catch (e: any) {
-      setError(e.response?.data?.message || e.message)
+      setError(e.response?.data?.message || e.message || 'Login failed')
     } finally {
       setLoading(false)
     }
   }
 
-  return (
-    <div className="bg-white rounded-lg shadow p-6 max-w-md mx-auto">
-      <h2 className="text-2xl font-bold mb-4">Login / Register</h2>
+  const handleForgotPassword = () => {
+    // TODO: Implement forgot password functionality
+    setSuccess('Password reset link sent to your email')
+  }
 
-      <div className="space-y-3">
-        <div>
-          <label className="block text-sm text-gray-600">Email</label>
-          <input className="w-full border px-3 py-2 rounded" value={email} onChange={(e) => setEmailInput(e.target.value)} />
-        </div>
-        <div>
-          <label className="block text-sm text-gray-600">Password</label>
-          <input type="password" className="w-full border px-3 py-2 rounded" value={password} onChange={(e) => setPassword(e.target.value)} />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm text-gray-600">First name</label>
-            <input className="w-full border px-3 py-2 rounded" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+  // Load remembered email on mount
+  useEffect(() => {
+    const rememberedEmail = localStorage.getItem('pos-remember-email')
+    if (rememberedEmail) {
+      setEmailInput(rememberedEmail)
+      setRememberMe(true)
+    }
+  }, [])
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+        
+        {/* Left Panel - POS Branding */}
+        <motion.div
+          initial={{ opacity: 0, x: -50 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6 }}
+          className="hidden lg:block"
+        >
+          <div className="text-center lg:text-left">
+            <div className="flex items-center justify-center lg:justify-start mb-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+                <Store className="w-8 h-8 text-white" />
+              </div>
+              <div className="ml-4">
+                <h1 className="text-3xl font-bold text-gray-900">POS Pro</h1>
+                <p className="text-gray-600">Point of Sale Management System</p>
+              </div>
+            </div>
+            
+            <div className="space-y-8">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="bg-white rounded-2xl p-6 shadow-lg"
+              >
+                <div className="flex items-center mb-4">
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <TrendingUp className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <h3 className="ml-3 text-lg font-semibold text-gray-900">Real-time Analytics</h3>
+                </div>
+                <p className="text-gray-600">Track sales, inventory, and performance metrics in real-time</p>
+              </motion.div>
+              
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+                className="bg-white rounded-2xl p-6 shadow-lg"
+              >
+                <div className="flex items-center mb-4">
+                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                    <Package className="w-6 h-6 text-green-600" />
+                  </div>
+                  <h3 className="ml-3 text-lg font-semibold text-gray-900">Inventory Management</h3>
+                </div>
+                <p className="text-gray-600">Smart inventory tracking with automated reorder points</p>
+              </motion.div>
+              
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+                className="bg-white rounded-2xl p-6 shadow-lg"
+              >
+                <div className="flex items-center mb-4">
+                  <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <Users className="w-6 h-6 text-purple-600" />
+                  </div>
+                  <h3 className="ml-3 text-lg font-semibold text-gray-900">Multi-Store Support</h3>
+                </div>
+                <p className="text-gray-600">Manage multiple locations from a single dashboard</p>
+              </motion.div>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm text-gray-600">Last name</label>
-            <input className="w-full border px-3 py-2 rounded" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+        </motion.div>
+
+        {/* Right Panel - Login Form */}
+        <motion.div
+          initial={{ opacity: 0, x: 50 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6 }}
+          className="w-full max-w-md mx-auto"
+        >
+          <div className="bg-white rounded-2xl shadow-xl p-8">
+            {/* Mobile Logo */}
+            <div className="flex items-center justify-center mb-8 lg:hidden">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
+                <Store className="w-6 h-6 text-white" />
+              </div>
+              <h1 className="ml-3 text-2xl font-bold text-gray-900">POS Pro</h1>
+            </div>
+
+            {/* Header */}
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                {isRegisterMode ? 'Create Account' : 'Welcome Back'}
+              </h2>
+              <p className="text-gray-600">
+                {isRegisterMode 
+                  ? 'Join thousands of stores using POS Pro'
+                  : 'Sign in to manage your store'
+                }
+              </p>
+            </div>
+
+            {/* Success/Error Messages */}
+            {success && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4 flex items-center"
+              >
+                <CheckCircle className="w-5 h-5 text-green-600 mr-3 flex-shrink-0" />
+                <span className="text-green-800 text-sm">{success}</span>
+              </motion.div>
+            )}
+            
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center"
+              >
+                <AlertCircle className="w-5 h-5 text-red-600 mr-3 flex-shrink-0" />
+                <span className="text-red-800 text-sm">{error}</span>
+              </motion.div>
+            )}
+
+            {/* Form */}
+            <div className="space-y-6">
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmailInput(e.target.value)}
+                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                      formErrors.email ? 'border-red-300' : 'border-gray-300'
+                    }`}
+                    placeholder="you@example.com"
+                  />
+                </div>
+                {formErrors.email && (
+                  <p className="mt-1 text-sm text-red-600">{formErrors.email}</p>
+                )}
+              </div>
+
+              {/* Password */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                      formErrors.password ? 'border-red-300' : 'border-gray-300'
+                    }`}
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+                {formErrors.password && (
+                  <p className="mt-1 text-sm text-red-600">{formErrors.password}</p>
+                )}
+              </div>
+
+              {/* Registration Fields */}
+              {isRegisterMode && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="space-y-4"
+                >
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        <input
+                          type="text"
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                          className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                            formErrors.firstName ? 'border-red-300' : 'border-gray-300'
+                          }`}
+                          placeholder="John"
+                        />
+                      </div>
+                      {formErrors.firstName && (
+                        <p className="mt-1 text-sm text-red-600">{formErrors.firstName}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+                      <input
+                        type="text"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                          formErrors.lastName ? 'border-red-300' : 'border-gray-300'
+                        }`}
+                        placeholder="Doe"
+                      />
+                      {formErrors.lastName && (
+                        <p className="mt-1 text-sm text-red-600">{formErrors.lastName}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Role Selection */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Select Role</label>
+                    <div className="grid grid-cols-1 gap-2">
+                      {roles.map((role) => (
+                        <button
+                          key={role.id}
+                          type="button"
+                          onClick={() => setSelectedRole(role.id as any)}
+                          className={`p-3 border rounded-lg text-left transition-colors ${
+                            selectedRole === role.id
+                              ? 'border-blue-500 bg-blue-50'
+                              : 'border-gray-300 hover:border-gray-400'
+                          }`}
+                        >
+                          <div className="flex items-center">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 ${
+                              selectedRole === role.id ? 'bg-blue-100' : 'bg-gray-100'
+                            }`}>
+                              {role.icon}
+                            </div>
+                            <div>
+                              <div className="font-medium text-gray-900">{role.name}</div>
+                              <div className="text-xs text-gray-500">{role.description}</div>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Store Location */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Store Location</label>
+                    <select
+                      value={storeLocation}
+                      onChange={(e) => setStoreLocation(e.target.value)}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                        formErrors.storeLocation ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                    >
+                      <option value="">Select a location</option>
+                      {storeLocations.map((location) => (
+                        <option key={location} value={location}>{location}</option>
+                      ))}
+                    </select>
+                    {formErrors.storeLocation && (
+                      <p className="mt-1 text-sm text-red-600">{formErrors.storeLocation}</p>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Remember Me & Forgot Password */}
+              <div className="flex items-center justify-between">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-600">Remember me</span>
+                </label>
+                {!isRegisterMode && (
+                  <button
+                    type="button"
+                    onClick={handleForgotPassword}
+                    className="text-sm text-blue-600 hover:text-blue-700"
+                  >
+                    Forgot password?
+                  </button>
+                )}
+              </div>
+
+              {/* Submit Button */}
+              <button
+                onClick={isRegisterMode ? handleRegister : handleLogin}
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    {isRegisterMode ? 'Creating Account...' : 'Signing In...'}
+                  </div>
+                ) : (
+                  isRegisterMode ? 'Create Account' : 'Sign In'
+                )}
+              </button>
+
+              {/* Toggle Mode */}
+              <div className="text-center">
+                <p className="text-sm text-gray-600">
+                  {isRegisterMode ? 'Already have an account?' : "Don't have an account?"}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsRegisterMode(!isRegisterMode)
+                      setError(null)
+                      setSuccess(null)
+                      setFormErrors({})
+                    }}
+                    className="ml-1 text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    {isRegisterMode ? 'Sign In' : 'Create Account'}
+                  </button>
+                </p>
+              </div>
+            </div>
+
+            {/* Tenant Info */}
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <p className="text-xs text-gray-500 text-center">
+                Tenant ID: {tenantId}
+              </p>
+            </div>
           </div>
-        </div>
-        {error && <div className="text-red-600 text-sm">{error}</div>}
-        <div className="flex gap-3">
-          <button disabled={loading} onClick={handleRegister} className="px-4 py-2 bg-blue-600 text-white rounded">
-            {loading ? 'Please wait...' : 'Register & Login'}
-          </button>
-          <button disabled={loading} onClick={handleLogin} className="px-4 py-2 bg-gray-100 rounded">
-            {loading ? 'Please wait...' : 'Login'}
-          </button>
-        </div>
-        <p className="text-xs text-gray-500">Tenant: {tenantId}</p>
+        </motion.div>
       </div>
     </div>
   )

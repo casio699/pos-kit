@@ -1,18 +1,34 @@
 import axios from 'axios'
 import { useAuth } from '../store/auth'
 
-export const API_URL = (import.meta as any).env?.VITE_API_URL || '/api'
+export const API_URL = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '')
 
-export const api = axios.create({ baseURL: API_URL })
+export const api = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+})
 
 api.interceptors.request.use((config) => {
   const token = useAuth.getState().token
   if (token) {
-    if (!config.headers) config.headers = {} as any
-    ;(config.headers as any)['Authorization'] = `Bearer ${token}`
+    config.headers.Authorization = `Bearer ${token}`
   }
   return config
+}, (error) => {
+  return Promise.reject(error)
 })
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401) {
+      useAuth.getState().reset()
+    }
+    return Promise.reject(error)
+  }
+)
 
 export async function register(payload: { email: string; password: string; first_name: string; last_name: string; tenant_id: string }) {
   const { data } = await api.post('/auth/register', payload)

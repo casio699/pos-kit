@@ -22,6 +22,7 @@ export default function Navbar() {
         <span className="text-xs text-gray-500">MVP</span>
       </div>
       <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+        <Link to="/dashboard" className={linkClass('/dashboard')}>Dashboard</Link>
         <Link to="/products" className={linkClass('/products')}>Products</Link>
         <Link to="/inventory" className={linkClass('/inventory')}>Inventory</Link>
         <Link to="/sales" className={linkClass('/sales')}>Sales</Link>
