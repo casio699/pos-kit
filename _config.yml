@@ -1,0 +1,6 @@
+# Exclude node_modules from Jekyll processing
+exclude:
+  - node_modules/
+  - web-frontend/node_modules/
+  - backend/node_modules/
+  - desktop-client/node_modules/
