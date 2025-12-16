@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../store/auth'
+import { usePermissions } from '../hooks/usePermissions'
 import { listProducts, createProduct } from '../api/client'
 
 interface Product {
@@ -13,13 +14,11 @@ interface Product {
 }
 
 export default function Products() {
-  const { tenantId, token, email } = useAuth()
+  const { tenantId, token } = useAuth()
+  const { isAdmin } = usePermissions()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [items, setItems] = useState<Product[]>([])
-
-  // Debug: Log authentication state
-  console.log('Auth state:', { tenantId, token: token ? 'present' : 'missing', email })
 
   const [sku, setSku] = useState(`SKU-${Date.now()}`)
   const [name, setName] = useState('Test Product')
@@ -61,20 +60,22 @@ export default function Products() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-bold mb-4">Create Product</h2>
-        <div className="grid grid-cols-4 gap-4">
-          <input className="border px-3 py-2 rounded" placeholder="SKU" value={sku} onChange={e => setSku(e.target.value)} />
-          <input className="border px-3 py-2 rounded" placeholder="Name" value={name} onChange={e => setName(e.target.value)} />
-          <input className="border px-3 py-2 rounded" type="number" placeholder="Price" value={price} onChange={e => setPrice(parseFloat(e.target.value))} />
-          <input className="border px-3 py-2 rounded" type="number" placeholder="Cost" value={cost} onChange={e => setCost(parseFloat(e.target.value))} />
+      {isAdmin() && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-xl font-bold mb-4">Create Product</h2>
+          <div className="grid grid-cols-4 gap-4">
+            <input className="border px-3 py-2 rounded" placeholder="SKU" value={sku} onChange={e => setSku(e.target.value)} />
+            <input className="border px-3 py-2 rounded" placeholder="Name" value={name} onChange={e => setName(e.target.value)} />
+            <input className="border px-3 py-2 rounded" type="number" placeholder="Price" value={price} onChange={e => setPrice(parseFloat(e.target.value))} />
+            <input className="border px-3 py-2 rounded" type="number" placeholder="Cost" value={cost} onChange={e => setCost(parseFloat(e.target.value))} />
+          </div>
+          <div className="mt-3 flex gap-2">
+            <button onClick={create} disabled={loading} className="px-4 py-2 bg-blue-600 text-white rounded">{loading ? 'Saving...' : 'Create'}</button>
+            <button onClick={load} disabled={loading} className="px-4 py-2 bg-gray-100 rounded">Refresh</button>
+            {error && <span className="text-sm text-red-600">{error}</span>}
+          </div>
         </div>
-        <div className="mt-3 flex gap-2">
-          <button onClick={create} disabled={loading} className="px-4 py-2 bg-blue-600 text-white rounded">{loading ? 'Saving...' : 'Create'}</button>
-          <button onClick={load} disabled={loading} className="px-4 py-2 bg-gray-100 rounded">Refresh</button>
-          {error && <span className="text-sm text-red-600">{error}</span>}
-        </div>
-      </div>
+      )}
 
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-xl font-bold mb-4">Products</h2>

@@ -1,6 +1,8 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RbacService, DefaultRole } from './rbac.service';
+import { PermissionsGuard } from './guards/permissions.guard';
+import { RequirePermissions } from './decorators/permissions.decorator';
+import { RbacService, DefaultRole, Permission } from './rbac.service';
 import { Role } from './entities/role.entity';
 import { User } from '../auth/entities/user.entity';
 import { CreateRoleDto, UpdateRoleDto, AssignRoleDto } from './dto/role.dto';
@@ -9,7 +11,8 @@ interface UserWithRoles extends Omit<User, 'roles'> {
   roles: Role[];
 }
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermissions(Permission.ROLE_MANAGE)
 @Controller('rbac')
 export class RbacController {
   constructor(private readonly rbacService: RbacService) {}

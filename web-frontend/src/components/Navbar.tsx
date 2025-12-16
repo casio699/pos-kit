@@ -1,10 +1,12 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../store/auth'
+import { usePermissions } from '../hooks/usePermissions'
 
 export default function Navbar() {
   const location = useLocation()
   const navigate = useNavigate()
   const { email, reset } = useAuth()
+  const { isAdmin } = usePermissions()
 
   const linkClass = (path: string) =>
     `px-3 py-2 rounded-md text-sm font-medium ${
@@ -25,7 +27,7 @@ export default function Navbar() {
         <Link to="/sales" className={linkClass('/sales')}>Sales</Link>
         <Link to="/payments" className={linkClass('/payments')}>Payments</Link>
         <Link to="/shopify" className={linkClass('/shopify')}>Shopify</Link>
-        <Link to="/rbac" className={linkClass('/rbac')}>RBAC</Link>
+        {isAdmin() && <Link to="/rbac" className={linkClass('/rbac')}>RBAC</Link>}
         <Link to="/tester" className={linkClass('/tester')}>API Tester</Link>
       </div>
       <div className="flex items-center gap-3">
