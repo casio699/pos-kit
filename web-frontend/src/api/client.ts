@@ -63,3 +63,23 @@ export async function listSales(tenant_id: string) {
   const { data } = await api.get('/sales', { params: { tenant_id } })
   return data
 }
+
+export const salesApi = {
+  createSale: (data: any) => api.post('/sales', data),
+  listSales: () => api.get('/sales'),
+  getSale: (id: string) => api.get(`/sales/${id}`),
+  refundSale: (id: string, data: any) => api.post(`/sales/${id}/refund`, data),
+}
+
+export const paymentApi = {
+  createPaymentIntent: (data: any) => api.post('/payments/create-payment-intent', data),
+  getPaymentStatus: (paymentIntentId: string) => api.get(`/payments/status/${paymentIntentId}`),
+}
+
+export const shopifyApi = {
+  syncProducts: (products: any[]) => api.post('/shopify/sync/products', { products }),
+  syncInventory: (inventory: any[]) => api.post('/shopify/sync/inventory', { inventory }),
+  createOrder: (orderData: any) => api.post('/shopify/orders/create', orderData),
+  getProducts: () => api.get('/shopify/products'),
+  getSyncStatus: () => api.get('/shopify/sync/status'),
+}

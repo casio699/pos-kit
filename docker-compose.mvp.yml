@@ -29,6 +29,8 @@ services:
       CORS_ORIGIN: "*"
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-sk_test_your_test_key_here}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-whsec_your_webhook_secret_here}
+      SHOPIFY_STORE_URL: ${SHOPIFY_STORE_URL:-your-store.myshopify.com}
+      SHOPIFY_ADMIN_ACCESS_TOKEN: ${SHOPIFY_ADMIN_ACCESS_TOKEN:-shpat_your_admin_access_token_here}
 
     depends_on:
       postgres:

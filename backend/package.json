@@ -36,6 +36,8 @@
     "@nestjs/passport": "^10.0.3",
     "@nestjs/platform-express": "^10.3.0",
     "@nestjs/typeorm": "^10.0.0",
+    "@shopify/shopify-api": "^12.2.0",
+    "@shopify/shopify-app-express": "^6.0.4",
     "@types/stripe": "^8.0.416",
     "bcrypt": "^5.1.1",
     "class-transformer": "^0.5.1",

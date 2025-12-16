@@ -1,4 +1,3 @@
-import React from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../store/auth'
 
@@ -24,6 +23,8 @@ export default function Navbar() {
         <Link to="/products" className={linkClass('/products')}>Products</Link>
         <Link to="/inventory" className={linkClass('/inventory')}>Inventory</Link>
         <Link to="/sales" className={linkClass('/sales')}>Sales</Link>
+        <Link to="/payments" className={linkClass('/payments')}>Payments</Link>
+        <Link to="/shopify" className={linkClass('/shopify')}>Shopify</Link>
         <Link to="/tester" className={linkClass('/tester')}>API Tester</Link>
       </div>
       <div className="flex items-center gap-3">

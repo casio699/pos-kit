@@ -8,6 +8,8 @@ const Login = React.lazy(() => import('./pages/Login'))
 const Products = React.lazy(() => import('./pages/Products'))
 const Inventory = React.lazy(() => import('./pages/Inventory'))
 const Sales = React.lazy(() => import('./pages/Sales'))
+const Payments = React.lazy(() => import('./pages/Payments'))
+const Shopify = React.lazy(() => import('./pages/Shopify'))
 
 function ProtectedRoute({ children }: { children: React.ReactElement }) {
   const { token } = useAuth()
@@ -47,6 +49,22 @@ export default function AppRouter() {
               element={
                 <ProtectedRoute>
                   <Sales />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/payments"
+              element={
+                <ProtectedRoute>
+                  <Payments />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/shopify"
+              element={
+                <ProtectedRoute>
+                  <Shopify />
                 </ProtectedRoute>
               }
             />

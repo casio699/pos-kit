@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '../store/auth'
 import { listProducts, createProduct } from '../api/client'
 
@@ -13,10 +13,13 @@ interface Product {
 }
 
 export default function Products() {
-  const { tenantId } = useAuth()
+  const { tenantId, token, email } = useAuth()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [items, setItems] = useState<Product[]>([])
+
+  // Debug: Log authentication state
+  console.log('Auth state:', { tenantId, token: token ? 'present' : 'missing', email })
 
   const [sku, setSku] = useState(`SKU-${Date.now()}`)
   const [name, setName] = useState('Test Product')
