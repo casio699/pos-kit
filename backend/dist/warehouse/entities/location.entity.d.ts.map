@@ -1,0 +1,1 @@
+{"version":3,"file":"location.entity.d.ts","sourceRoot":"","sources":["../../../src/warehouse/entities/location.entity.ts"],"names":[],"mappings":"AAEA,qBACa,QAAQ;IAEnB,EAAE,EAAE,MAAM,CAAC;IAGX,SAAS,EAAE,MAAM,CAAC;IAGlB,IAAI,EAAE,MAAM,CAAC;IAGb,IAAI,EAAE,MAAM,CAAC;IAGb,OAAO,EAAE,MAAM,CAAC;IAGhB,SAAS,EAAE,OAAO,CAAC;IAGnB,UAAU,EAAE,IAAI,CAAC;CAClB"}

@@ -1,0 +1,47 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: pos_user
+      POSTGRES_PASSWORD: pos_password
+      POSTGRES_DB: pos_kit
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pos_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_USER: pos_user
+      DATABASE_PASSWORD: pos_password
+      DATABASE_NAME: pos_kit
+      JWT_SECRET: change-me-in-prod
+      CORS_ORIGIN: "*"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+
+  web:
+    build:
+      context: ./web-frontend
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+    # nginx in web proxies /api to http://backend:3000
+
+volumes:
+  postgres_data:

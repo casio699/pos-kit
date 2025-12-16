@@ -1,0 +1,1 @@
+{"version":3,"file":"stock-movements.controller.d.ts","sourceRoot":"","sources":["../../src/stock-movements/stock-movements.controller.ts"],"names":[],"mappings":"AAEA,OAAO,EAAE,qBAAqB,EAAE,MAAM,2BAA2B,CAAC;AAElE,qBAEa,wBAAwB;IACvB,OAAO,CAAC,eAAe;gBAAf,eAAe,EAAE,qBAAqB;IAGpD,YAAY,CAAqB,SAAS,EAAE,MAAM,EAAiB,IAAI,SAAI,EAAiB,IAAI,SAAM;CAG7G"}

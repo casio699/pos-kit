@@ -1,0 +1,1209 @@
+openapi: 3.0.0
+info:
+  title: KiTS Universal POS API
+  description: Enterprise POS + Inventory Management System
+  version: 1.0.0
+  contact:
+    name: API Support
+    url: https://kits-pos.dev/support
+
+servers:
+  - url: https://api.kits-pos.dev/v1
+    description: Production
+  - url: http://localhost:3000/v1
+    description: Local Development
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+
+    Tenant:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Location:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          type: string
+          enum: [store, warehouse]
+        address:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        sku:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        attributes:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+
+    InventoryItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        product_id:
+          type: string
+          format: uuid
+        location_id:
+          type: string
+          format: uuid
+        qty_available:
+          type: integer
+        qty_reserved:
+          type: integer
+        qty_damaged:
+          type: integer
+        qty_in_transit:
+          type: integer
+        bin_id:
+          type: string
+        uom:
+          type: string
+        last_updated:
+          type: string
+          format: date-time
+
+    StockMovement:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        product_id:
+          type: string
+          format: uuid
+        from_location_id:
+          type: string
+          format: uuid
+        to_location_id:
+          type: string
+          format: uuid
+        movement_type:
+          type: string
+          enum: [sale, receive, adjust, transfer, return]
+        quantity:
+          type: integer
+        lot_id:
+          type: string
+          format: uuid
+        reason:
+          type: string
+        user_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+
+    PurchaseOrder:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        po_number:
+          type: string
+        supplier_id:
+          type: string
+          format: uuid
+        expected_delivery_date:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [draft, sent, acknowledged, partial, received, cancelled]
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/POLine'
+        created_at:
+          type: string
+          format: date-time
+
+    POLine:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        po_id:
+          type: string
+          format: uuid
+        product_id:
+          type: string
+          format: uuid
+        qty_ordered:
+          type: integer
+        qty_received:
+          type: integer
+        unit_cost:
+          type: number
+          format: decimal
+
+    Sale:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        location_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        total_amount:
+          type: number
+          format: decimal
+        payment_method:
+          type: string
+          enum: [card, cash, split]
+        status:
+          type: string
+          enum: [completed, refunded, partial_refund]
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/SaleLine'
+        created_at:
+          type: string
+          format: date-time
+
+    SaleLine:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        sale_id:
+          type: string
+          format: uuid
+        product_id:
+          type: string
+          format: uuid
+        lot_id:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+        unit_price:
+          type: number
+          format: decimal
+        discount:
+          type: number
+          format: decimal
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        first_name:
+          type: string
+        last_name:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    LoginResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+
+    InventoryAdjustRequest:
+      type: object
+      required:
+        - product_id
+        - location_id
+        - quantity
+        - reason
+      properties:
+        product_id:
+          type: string
+          format: uuid
+        location_id:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+        lot_id:
+          type: string
+          format: uuid
+        reason:
+          type: string
+
+    InventoryTransferRequest:
+      type: object
+      required:
+        - product_id
+        - from_location_id
+        - to_location_id
+        - quantity
+      properties:
+        product_id:
+          type: string
+          format: uuid
+        from_location_id:
+          type: string
+          format: uuid
+        to_location_id:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+        lot_id:
+          type: string
+          format: uuid
+
+    SaleRequest:
+      type: object
+      required:
+        - location_id
+        - lines
+        - payment_method
+      properties:
+        location_id:
+          type: string
+          format: uuid
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              product_id:
+                type: string
+                format: uuid
+              quantity:
+                type: integer
+              unit_price:
+                type: number
+                format: decimal
+              discount:
+                type: number
+                format: decimal
+        payment_method:
+          type: string
+          enum: [card, cash, split]
+        total_amount:
+          type: number
+          format: decimal
+
+    PurchaseOrderRequest:
+      type: object
+      required:
+        - po_number
+        - supplier_id
+        - lines
+        - expected_delivery_date
+      properties:
+        po_number:
+          type: string
+        supplier_id:
+          type: string
+          format: uuid
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              product_id:
+                type: string
+                format: uuid
+              qty_ordered:
+                type: integer
+              unit_cost:
+                type: number
+                format: decimal
+        expected_delivery_date:
+          type: string
+          format: date
+
+    POReceiveRequest:
+      type: object
+      required:
+        - lines
+      properties:
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              po_line_id:
+                type: string
+                format: uuid
+              qty_received:
+                type: integer
+              lot_number:
+                type: string
+
+security:
+  - BearerAuth: []
+
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh access token
+      operationId: refreshToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: User logout
+      operationId: logout
+      responses:
+        '200':
+          description: Logout successful
+
+  /products:
+    get:
+      tags:
+        - Products
+      summary: List products
+      operationId: listProducts
+      parameters:
+        - name: tenant_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: location_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+                  total:
+                    type: integer
+
+    post:
+      tags:
+        - Products
+      summary: Create product
+      operationId: createProduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - sku
+                - name
+              properties:
+                sku:
+                  type: string
+                name:
+                  type: string
+                description:
+                  type: string
+                attributes:
+                  type: object
+      responses:
+        '201':
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+
+  /products/{id}:
+    get:
+      tags:
+        - Products
+      summary: Get product by ID
+      operationId: getProduct
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Product details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+
+    put:
+      tags:
+        - Products
+      summary: Update product
+      operationId: updateProduct
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Product updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+
+    delete:
+      tags:
+        - Products
+      summary: Delete product
+      operationId: deleteProduct
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Product deleted
+
+  /inventory:
+    get:
+      tags:
+        - Inventory
+      summary: Get inventory items
+      operationId: getInventory
+      parameters:
+        - name: location_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: product_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Inventory items
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/InventoryItem'
+
+  /inventory/adjust:
+    post:
+      tags:
+        - Inventory
+      summary: Adjust inventory quantity
+      operationId: adjustInventory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryAdjustRequest'
+      responses:
+        '200':
+          description: Adjustment recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockMovement'
+
+  /inventory/transfer:
+    post:
+      tags:
+        - Inventory
+      summary: Transfer inventory between locations
+      operationId: transferInventory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryTransferRequest'
+      responses:
+        '200':
+          description: Transfer recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockMovement'
+
+  /inventory/movements:
+    get:
+      tags:
+        - Inventory
+      summary: Get stock movement history
+      operationId: getStockMovements
+      parameters:
+        - name: location_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: product_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: from_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: Stock movements
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StockMovement'
+
+  /inventory/low-stock:
+    get:
+      tags:
+        - Inventory
+      summary: Get low stock alerts
+      operationId: getLowStock
+      parameters:
+        - name: location_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Low stock items
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        product_id:
+                          type: string
+                          format: uuid
+                        current_qty:
+                          type: integer
+                        reorder_point:
+                          type: integer
+
+  /purchase-orders:
+    post:
+      tags:
+        - Purchase Orders
+      summary: Create purchase order
+      operationId: createPurchaseOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseOrderRequest'
+      responses:
+        '201':
+          description: Purchase order created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOrder'
+
+    get:
+      tags:
+        - Purchase Orders
+      summary: List purchase orders
+      operationId: listPurchaseOrders
+      parameters:
+        - name: supplier_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, sent, acknowledged, partial, received, cancelled]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: List of purchase orders
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PurchaseOrder'
+
+  /purchase-orders/{id}:
+    get:
+      tags:
+        - Purchase Orders
+      summary: Get purchase order
+      operationId: getPurchaseOrder
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Purchase order details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOrder'
+
+    put:
+      tags:
+        - Purchase Orders
+      summary: Update purchase order
+      operationId: updatePurchaseOrder
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Purchase order updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOrder'
+
+  /purchase-orders/{id}/receive:
+    post:
+      tags:
+        - Purchase Orders
+      summary: Receive purchase order
+      operationId: receivePurchaseOrder
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/POReceiveRequest'
+      responses:
+        '200':
+          description: Receipt recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOrder'
+
+  /sales:
+    post:
+      tags:
+        - Sales
+      summary: Create sale (checkout)
+      operationId: createSale
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaleRequest'
+      responses:
+        '201':
+          description: Sale completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sale'
+
+    get:
+      tags:
+        - Sales
+      summary: List sales
+      operationId: listSales
+      parameters:
+        - name: location_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: from_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: List of sales
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Sale'
+
+  /sales/{id}:
+    get:
+      tags:
+        - Sales
+      summary: Get sale details
+      operationId: getSale
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Sale details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sale'
+
+  /sales/{id}/refund:
+    post:
+      tags:
+        - Sales
+      summary: Refund sale
+      operationId: refundSale
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  format: decimal
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Refund processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sale'
+
+  /devices/register:
+    post:
+      tags:
+        - Devices
+      summary: Register POS device
+      operationId: registerDevice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - device_id
+                - device_type
+                - location_id
+              properties:
+                device_id:
+                  type: string
+                device_type:
+                  type: string
+                  enum: [terminal, printer, scanner, scale]
+                location_id:
+                  type: string
+                  format: uuid
+                firmware_version:
+                  type: string
+      responses:
+        '201':
+          description: Device registered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  device_id:
+                    type: string
+                  registered_at:
+                    type: string
+                    format: date-time
+
+  /devices/{id}/status:
+    get:
+      tags:
+        - Devices
+      summary: Get device status
+      operationId: getDeviceStatus
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Device status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  device_id:
+                    type: string
+                  online:
+                    type: boolean
+                  last_seen:
+                    type: string
+                    format: date-time
+                  firmware_version:
+                    type: string
+
+  /reports/dashboard:
+    get:
+      tags:
+        - Reporting
+      summary: Get dashboard metrics
+      operationId: getDashboard
+      parameters:
+        - name: location_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: from_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_sales:
+                    type: number
+                  transaction_count:
+                    type: integer
+                  avg_transaction_value:
+                    type: number
+                  inventory_value:
+                    type: number
+                  low_stock_count:
+                    type: integer
+
+  /reports/inventory-health:
+    get:
+      tags:
+        - Reporting
+      summary: Get inventory health report
+      operationId: getInventoryHealth
+      parameters:
+        - name: location_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Inventory health metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_items:
+                    type: integer
+                  stockout_count:
+                    type: integer
+                  overstock_count:
+                    type: integer
+                  inventory_turnover:
+                    type: number
+                  shrinkage_rate:
+                    type: number
+
+  /reports/export:
+    get:
+      tags:
+        - Reporting
+      summary: Export report data
+      operationId: exportReport
+      parameters:
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [sales, inventory, purchases]
+        - name: format
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [csv, json]
+        - name: from_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Report data
+          content:
+            text/csv:
+              schema:
+                type: string
+            application/json:
+              schema:
+                type: object
