@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Product } from './entities/product.entity';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class ProductsService {
@@ -20,16 +21,62 @@ export class ProductsService {
     });
   }
 
-  async findOne(id: string) {
-    return this.productRepo.findOne({ where: { id } });
+  async findOne(tenantId: string, id: string) {
+    const product = await this.productRepo.findOne({ 
+      where: { id, tenant_id: tenantId } 
+    });
+    
+    if (!product) {
+      throw new NotFoundException(`Product with ID ${id} not found`);
+    }
+    
+    return product;
   }
 
-  async update(id: string, data: any) {
-    await this.productRepo.update(id, { ...data, updated_at: new Date() });
-    return this.findOne(id);
+  async update(tenantId: string, id: string, data: any) {
+    await this.findOne(tenantId, id); // Verify product exists and belongs to tenant
+    await this.productRepo.update(
+      { id, tenant_id: tenantId },
+      { ...data, updated_at: new Date() }
+    );
+    return this.findOne(tenantId, id);
   }
 
-  async delete(id: string) {
-    return this.productRepo.delete(id);
+  async delete(tenantId: string, id: string) {
+    await this.findOne(tenantId, id); // Verify product exists and belongs to tenant
+    return this.productRepo.delete({ id, tenant_id: tenantId });
+  }
+
+  async initializeSampleData(tenantId: string) {
+    const sampleProducts = [
+      {
+        id: uuidv4(),
+        name: 'Sample Product 1',
+        description: 'This is a sample product',
+        sku: 'SP-001',
+        price: 19.99,
+        cost: 9.99,
+        is_active: true,
+      },
+      {
+        id: uuidv4(),
+        name: 'Sample Product 2',
+        description: 'Another sample product',
+        sku: 'SP-002',
+        price: 29.99,
+        cost: 14.99,
+        is_active: true,
+      },
+    ];
+
+    const products = sampleProducts.map(product => ({
+      ...product,
+      tenant_id: tenantId,
+      created_at: new Date(),
+      updated_at: new Date(),
+    }));
+
+    await this.productRepo.save(products);
+    return products;
   }
 }

@@ -6,7 +6,7 @@ import LoadingSpinner from '../components/LoadingSpinner'
 import { paymentApi } from '../api/client'
 
 export default function Payments() {
-  const { tenantId } = useAuth()
+  const {} = useAuth()
   const { isAdmin } = usePermissions()
 
   const [amount, setAmount] = useState('')
@@ -15,7 +15,7 @@ export default function Payments() {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<any>(null)
   const [error, setError] = useState('')
-  const [paymentHistory, setPaymentHistory] = useState<any[]>([])
+  const [paymentHistory] = useState<any[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedStatus, setSelectedStatus] = useState<string>('all')
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table')

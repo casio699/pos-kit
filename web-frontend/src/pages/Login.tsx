@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuth } from '../store/auth'
 import { login, register } from '../api/client'
-import { Eye, EyeOff, Store, Package, CreditCard, Users, TrendingUp, Lock, Mail, User, AlertCircle, CheckCircle } from 'lucide-react'
+import { Eye, EyeOff, Store, Package, CreditCard, Users, TrendingUp, Lock, Mail, User, AlertCircle, CheckCircle, X } from 'lucide-react'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -21,6 +21,10 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(false)
   const [isRegisterMode, setIsRegisterMode] = useState(false)
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+  
+  // Onboarding state
+  const [showOnboarding, setShowOnboarding] = useState(false)
+  const [onboardingStep, setOnboardingStep] = useState(0)
 
   // POS features
   const [selectedRole, setSelectedRole] = useState<'cashier' | 'manager' | 'admin'>('cashier')
@@ -53,10 +57,17 @@ export default function Login() {
     
     if (!password) errors.password = 'Password is required'
     else if (password.length < 6) errors.password = 'Password must be at least 6 characters'
+    else if (password.length > 128) errors.password = 'Password is too long (max 128 characters)'
     
     if (isRegisterMode) {
       if (!firstName) errors.firstName = 'First name is required'
+      else if (firstName.length < 2) errors.firstName = 'First name must be at least 2 characters'
+      else if (firstName.length > 50) errors.firstName = 'First name is too long (max 50 characters)'
+      
       if (!lastName) errors.lastName = 'Last name is required'
+      else if (lastName.length < 2) errors.lastName = 'Last name must be at least 2 characters'
+      else if (lastName.length > 50) errors.lastName = 'Last name is too long (max 50 characters)'
+      
       if (!storeLocation) errors.storeLocation = 'Store location is required'
     }
     
@@ -71,13 +82,30 @@ export default function Login() {
     setError(null)
     setSuccess(null)
     try {
-      await register({ 
+      // Generate a UUID for the tenant if none exists
+      let newTenantId = tenantId
+      
+      if (!tenantId || tenantId === 'Generating...' || tenantId.length < 10) {
+        const generateUUID = () => {
+          return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            const r = Math.random() * 16 | 0
+            const v = c === 'x' ? r : (r & 0x3 | 0x8)
+            return v.toString(16)
+          })
+        }
+        newTenantId = generateUUID()
+      }
+      
+      const registrationData = { 
         email, 
         password, 
         first_name: firstName, 
-        last_name: lastName, 
-        tenant_id: tenantId
-      })
+        last_name: lastName,
+        tenant_id: newTenantId,
+        role: selectedRole
+      }
+      
+      await register(registrationData)
       setSuccess('Registration successful! Logging you in...')
       
       // Auto-login after successful registration
@@ -92,7 +120,12 @@ export default function Login() {
             localStorage.setItem('pos-remember-email', email)
           }
           
-          goNext()
+          // Show onboarding modal for new users BEFORE redirecting
+          setShowOnboarding(true)
+          setOnboardingStep(0)
+          
+          // Don't redirect immediately - let user see onboarding first
+          // setTimeout(goNext, 1500) // Commented out - redirect happens after onboarding
         } catch (loginError: any) {
           setError('Registration successful but login failed. Please try logging in manually.')
         }
@@ -131,9 +164,28 @@ export default function Login() {
     }
   }
 
-  const handleForgotPassword = () => {
-    // TODO: Implement forgot password functionality
-    setSuccess('Password reset link sent to your email')
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setError('Please enter your email address first')
+      return
+    }
+    
+    if (!/\S+@\S+\.\S+/.test(email)) {
+      setError('Please enter a valid email address')
+      return
+    }
+    
+    setLoading(true)
+    setError(null)
+    try {
+      // TODO: Implement actual forgot password API call
+      // await api.post('/auth/forgot-password', { email })
+      setSuccess('Password reset link sent to your email')
+    } catch (e: any) {
+      setError(e.response?.data?.message || e.message || 'Failed to send password reset link')
+    } finally {
+      setLoading(false)
+    }
   }
 
   // Load remembered email on mount
@@ -345,15 +397,18 @@ export default function Login() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
-                      <input
-                        type="text"
-                        value={lastName}
-                        onChange={(e) => setLastName(e.target.value)}
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                          formErrors.lastName ? 'border-red-300' : 'border-gray-300'
-                        }`}
-                        placeholder="Doe"
-                      />
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        <input
+                          type="text"
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                          className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                            formErrors.lastName ? 'border-red-300' : 'border-gray-300'
+                          }`}
+                          placeholder="Doe"
+                        />
+                      </div>
                       {formErrors.lastName && (
                         <p className="mt-1 text-sm text-red-600">{formErrors.lastName}</p>
                       )}
@@ -474,12 +529,132 @@ export default function Login() {
             {/* Tenant Info */}
             <div className="mt-6 pt-6 border-t border-gray-200">
               <p className="text-xs text-gray-500 text-center">
-                Tenant ID: {tenantId}
+                Tenant ID: {tenantId === 'Generating...' ? 'Loading...' : tenantId?.substring(0, 8) + '...' || 'Not Available'}
               </p>
             </div>
           </div>
         </motion.div>
       </div>
+
+      {/* Onboarding Modal */}
+      {showOnboarding && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto relative"
+          >
+            <div className="p-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome to KiTS POS!</h2>
+              
+              {onboardingStep === 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-3">Are you a new or existing customer?</h3>
+                  <div className="space-y-4">
+                    <button
+                      onClick={() => setOnboardingStep(1)}
+                      className="w-full p-4 border-2 border-blue-500 rounded-lg hover:bg-blue-50 transition-colors text-left"
+                    >
+                      <h4 className="font-semibold text-blue-600">New Customer</h4>
+                      <p className="text-gray-600 text-sm mt-1">I'm setting up a new store and need to get started</p>
+                    </button>
+                    <button
+                      onClick={() => setOnboardingStep(2)}
+                      className="w-full p-4 border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-left"
+                    >
+                      <h4 className="font-semibold text-gray-700">Existing Customer</h4>
+                      <p className="text-gray-600 text-sm mt-1">I already have a store and want to connect it</p>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {onboardingStep === 1 && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-3">Let's set up your new store</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Store Name</label>
+                      <input
+                        type="text"
+                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="My Store"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Store Type</label>
+                      <select className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                        <option>Retail Store</option>
+                        <option>Restaurant</option>
+                        <option>Service Business</option>
+                        <option>Other</option>
+                      </select>
+                    </div>
+                    <div className="flex space-x-3">
+                      <button
+                        onClick={() => setOnboardingStep(0)}
+                        className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                      >
+                        Back
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowOnboarding(false)
+                          goNext()
+                        }}
+                        className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
+                      >
+                        Complete Setup
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {onboardingStep === 2 && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-3">Connect your existing store</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Store ID</label>
+                      <input
+                        type="text"
+                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Enter your store ID"
+                      />
+                    </div>
+                    <div className="flex space-x-3">
+                      <button
+                        onClick={() => setOnboardingStep(0)}
+                        className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                      >
+                        Back
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowOnboarding(false)
+                          goNext()
+                        }}
+                        className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
+                      >
+                        Connect Store
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <button
+              onClick={() => setShowOnboarding(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </motion.div>
+        </div>
+      )}
     </div>
   )
 }

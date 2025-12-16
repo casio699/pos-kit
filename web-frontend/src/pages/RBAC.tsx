@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../store/auth'
 import { apiClient } from '../api/client'
 import { motion } from 'framer-motion'
-import { Search, Users, Shield, Settings, Edit, Trash2, Plus, Download, X, AlertCircle } from 'lucide-react'
+import { Search, Users, Shield, Settings, Edit, Trash2, Plus, Download, X, AlertCircle, ChevronDown } from 'lucide-react'
 
 interface Role {
   id: string
@@ -52,8 +52,6 @@ export default function RBAC() {
     description: '',
     permissions: []
   })
-  const [selectedUser, setSelectedUser] = useState<string>('')
-  const [selectedRole, setSelectedRole] = useState<string>('')
   
   // UI states
   const [searchTerm, setSearchTerm] = useState('')
@@ -167,25 +165,6 @@ export default function RBAC() {
       loadData()
     } catch (err: any) {
       setError(err.message || 'Failed to delete role')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleAssignRole = async () => {
-    if (!selectedUser || !selectedRole) {
-      setError('Please select both user and role')
-      return
-    }
-
-    setLoading(true)
-    try {
-      await apiClient.assignRole(selectedUser, { roleId: selectedRole })
-      setSelectedUser('')
-      setSelectedRole('')
-      loadData()
-    } catch (err: any) {
-      setError(err.message || 'Failed to assign role')
     } finally {
       setLoading(false)
     }

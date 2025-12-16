@@ -11,5 +11,6 @@ export declare class AuthController {
         refresh_token: string;
         user: import("./entities/user.entity").User;
     }>;
+    getProfile(req: any): Promise<any>;
 }
 //# sourceMappingURL=auth.controller.d.ts.map

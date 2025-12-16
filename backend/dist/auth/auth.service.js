@@ -52,10 +52,12 @@ const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const bcrypt = __importStar(require("bcrypt"));
 const user_entity_1 = require("./entities/user.entity");
+const rbac_service_1 = require("../rbac/rbac.service");
 let AuthService = class AuthService {
-    constructor(userRepo, jwtService) {
+    constructor(userRepo, jwtService, rbacService) {
         this.userRepo = userRepo;
         this.jwtService = jwtService;
+        this.rbacService = rbacService;
     }
     async register(tenant_id, email, password, first_name, last_name) {
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -67,16 +69,37 @@ let AuthService = class AuthService {
             last_name,
             roles: ['user'],
         });
-        return this.userRepo.save(user);
+        const savedUser = await this.userRepo.save(user);
+        // Assign default 'viewer' role to new users
+        try {
+            const viewerRole = await this.rbacService.getRoleByName('viewer', tenant_id);
+            if (viewerRole) {
+                await this.rbacService.assignRole(savedUser.id, viewerRole.id, tenant_id);
+            }
+        }
+        catch (error) {
+            // If roles aren't initialized, initialize them first
+            await this.rbacService.initializeDefaultRoles(tenant_id);
+            const viewerRole = await this.rbacService.getRoleByName('viewer', tenant_id);
+            if (viewerRole) {
+                await this.rbacService.assignRole(savedUser.id, viewerRole.id, tenant_id);
+            }
+        }
+        return savedUser;
     }
     async login(email, password) {
         const user = await this.userRepo.findOne({ where: { email } });
         if (!user || !(await bcrypt.compare(password, user.password_hash))) {
             throw new common_1.UnauthorizedException('Invalid credentials');
         }
-        const payload = { sub: user.id, email: user.email, roles: user.roles };
+        // Get proper RBAC roles for the user
+        const userRoles = await this.rbacService.getUserRoles(user.id, user.tenant_id);
+        const roleNames = userRoles.map(role => role.name);
+        const payload = { sub: user.id, email: user.email, roles: roleNames, tenant_id: user.tenant_id };
         const access_token = this.jwtService.sign(payload);
         const refresh_token = this.jwtService.sign(payload, { expiresIn: '7d' });
+        // Update user object with proper roles for response
+        user.roles = roleNames;
         return { access_token, refresh_token, user };
     }
     async validateUser(userId) {
@@ -88,6 +111,7 @@ exports.AuthService = AuthService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
-        jwt_1.JwtService])
+        jwt_1.JwtService,
+        rbac_service_1.RbacService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map

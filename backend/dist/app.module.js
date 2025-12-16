@@ -23,6 +23,13 @@ const webhooks_module_1 = require("./webhooks/webhooks.module");
 const sync_module_1 = require("./sync/sync.module");
 const common_module_1 = require("./common/common.module");
 const health_controller_1 = require("./health.controller");
+const payments_module_1 = require("./payments/payments.module");
+const shopify_module_1 = require("./shopify/shopify.module");
+const rbac_module_1 = require("./rbac/rbac.module");
+const audit_module_1 = require("./audit/audit.module");
+const core_1 = require("@nestjs/core");
+const audit_interceptor_1 = require("./audit/interceptors/audit.interceptor");
+const audit_controller_1 = require("./audit/audit.controller");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -43,7 +50,7 @@ exports.AppModule = AppModule = __decorate([
                 entities: ['dist/**/*.entity{.ts,.js}'],
                 migrations: ['dist/database/migrations/*{.ts,.js}'],
                 migrationsTableName: 'typeorm_migrations',
-                synchronize: true,
+                synchronize: false,
                 autoLoadEntities: true,
                 logging: process.env.NODE_ENV === 'development',
                 poolSize: parseInt(process.env.DATABASE_POOL_SIZE || '20'),
@@ -60,8 +67,18 @@ exports.AppModule = AppModule = __decorate([
             devices_module_1.DevicesModule,
             webhooks_module_1.WebhooksModule,
             sync_module_1.SyncModule,
+            payments_module_1.PaymentsModule,
+            shopify_module_1.ShopifyModule,
+            rbac_module_1.RbacModule,
+            audit_module_1.AuditModule,
         ],
-        controllers: [health_controller_1.HealthController],
+        controllers: [health_controller_1.HealthController, audit_controller_1.AuditController],
+        providers: [
+            {
+                provide: core_1.APP_INTERCEPTOR,
+                useClass: audit_interceptor_1.AuditInterceptor,
+            },
+        ],
     })
 ], AppModule);
 //# sourceMappingURL=app.module.js.map

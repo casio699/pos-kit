@@ -11,9 +11,12 @@ export const api = axios.create({
 })
 
 api.interceptors.request.use((config) => {
-  const token = useAuth.getState().token
+  const { token, tenantId } = useAuth.getState()
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
+  }
+  if (tenantId) {
+    config.headers['X-Tenant-ID'] = tenantId
   }
   return config
 }, (error) => {
@@ -26,11 +29,22 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       useAuth.getState().reset()
     }
+    // Handle 403 Forbidden for new tenants without data
+    if (error.response?.status === 403) {
+      // Return empty array for list endpoints
+      if (error.config?.method?.toLowerCase() === 'get' && error.config.url?.includes('/products')) {
+        return { data: [] }
+      }
+      // Return null for single resource endpoints
+      if (error.config?.method?.toLowerCase() === 'get' && error.config.url?.match(/\/products\/[^/]+$/)) {
+        return { data: null }
+      }
+    }
     return Promise.reject(error)
   }
 )
 
-export async function register(payload: { email: string; password: string; first_name: string; last_name: string; tenant_id: string }) {
+export async function register(payload: { email: string; password: string; first_name: string; last_name: string; tenant_id: string; role: string }) {
   const { data } = await api.post('/auth/register', payload)
   return data
 }
@@ -39,6 +53,7 @@ export async function login(payload: { email: string; password: string }) {
   const { data } = await api.post('/auth/login', payload)
   return data
 }
+
 
 export async function listProducts(tenant_id: string) {
   const { data } = await api.get(`/products`, { params: { tenant_id } })

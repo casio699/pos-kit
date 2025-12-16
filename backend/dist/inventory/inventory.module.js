@@ -12,12 +12,13 @@ const typeorm_1 = require("@nestjs/typeorm");
 const inventory_service_1 = require("./inventory.service");
 const inventory_controller_1 = require("./inventory.controller");
 const inventory_item_entity_1 = require("./entities/inventory-item.entity");
+const rbac_module_1 = require("../rbac/rbac.module");
 let InventoryModule = class InventoryModule {
 };
 exports.InventoryModule = InventoryModule;
 exports.InventoryModule = InventoryModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([inventory_item_entity_1.InventoryItem])],
+        imports: [typeorm_1.TypeOrmModule.forFeature([inventory_item_entity_1.InventoryItem]), rbac_module_1.RbacModule],
         providers: [inventory_service_1.InventoryService],
         controllers: [inventory_controller_1.InventoryController],
         exports: [inventory_service_1.InventoryService],

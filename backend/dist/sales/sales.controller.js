@@ -14,8 +14,11 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SalesController = void 0;
 const common_1 = require("@nestjs/common");
-const passport_1 = require("@nestjs/passport");
 const sales_service_1 = require("./sales.service");
+const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const permissions_guard_1 = require("../rbac/guards/permissions.guard");
+const permissions_decorator_1 = require("../rbac/decorators/permissions.decorator");
+const rbac_service_1 = require("../rbac/rbac.service");
 let SalesController = class SalesController {
     constructor(salesService) {
         this.salesService = salesService;
@@ -36,6 +39,7 @@ let SalesController = class SalesController {
 exports.SalesController = SalesController;
 __decorate([
     (0, common_1.Post)(),
+    (0, permissions_decorator_1.RequirePermission)(rbac_service_1.Permission.SALE_CREATE),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
@@ -43,6 +47,7 @@ __decorate([
 ], SalesController.prototype, "createSale", null);
 __decorate([
     (0, common_1.Get)(),
+    (0, permissions_decorator_1.RequirePermission)(rbac_service_1.Permission.SALE_READ),
     __param(0, (0, common_1.Query)('tenant_id')),
     __param(1, (0, common_1.Query)('skip')),
     __param(2, (0, common_1.Query)('take')),
@@ -52,6 +57,7 @@ __decorate([
 ], SalesController.prototype, "listSales", null);
 __decorate([
     (0, common_1.Get)(':id'),
+    (0, permissions_decorator_1.RequirePermission)(rbac_service_1.Permission.SALE_READ),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
@@ -59,6 +65,7 @@ __decorate([
 ], SalesController.prototype, "getSale", null);
 __decorate([
     (0, common_1.Post)(':id/refund'),
+    (0, permissions_decorator_1.RequirePermission)(rbac_service_1.Permission.SALE_REFUND),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -67,7 +74,7 @@ __decorate([
 ], SalesController.prototype, "refundSale", null);
 exports.SalesController = SalesController = __decorate([
     (0, common_1.Controller)('sales'),
-    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, permissions_guard_1.PermissionsGuard),
     __metadata("design:paramtypes", [sales_service_1.SalesService])
 ], SalesController);
 //# sourceMappingURL=sales.controller.js.map

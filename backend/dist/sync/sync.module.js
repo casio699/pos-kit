@@ -8,13 +8,16 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SyncModule = void 0;
 const common_1 = require("@nestjs/common");
+const typeorm_1 = require("@nestjs/typeorm");
 const sync_service_1 = require("./sync.service");
 const sync_controller_1 = require("./sync.controller");
+const sync_event_entity_1 = require("./entities/sync-event.entity");
 let SyncModule = class SyncModule {
 };
 exports.SyncModule = SyncModule;
 exports.SyncModule = SyncModule = __decorate([
     (0, common_1.Module)({
+        imports: [typeorm_1.TypeOrmModule.forFeature([sync_event_entity_1.SyncEvent])],
         providers: [sync_service_1.SyncService],
         controllers: [sync_controller_1.SyncController],
         exports: [sync_service_1.SyncService],

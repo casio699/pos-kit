@@ -22,6 +22,23 @@ const getStoredToken = (): string | null => {
   }
 }
 
+const getStoredTenantId = (): string | null => {
+  try {
+    return localStorage.getItem('auth-tenant-id')
+  } catch {
+    return null
+  }
+}
+
+const extractTenantIdFromToken = (token: string): string | null => {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return payload.tenant_id || null
+  } catch {
+    return null
+  }
+}
+
 const getStoredEmail = (): string | null => {
   try {
     return localStorage.getItem('auth-email')
@@ -31,18 +48,28 @@ const getStoredEmail = (): string | null => {
 }
 
 const useAuth = create<AuthState>((set, get) => {
+  const token = getStoredToken()
+  const storedTenantId = getStoredTenantId()
+  const tenantId = storedTenantId || (token ? extractTenantIdFromToken(token) : null) || 'Generating...'
+  
   return {
-    token: getStoredToken(),
+    token,
     email: getStoredEmail(),
-    tenantId: '00000000-0000-0000-0000-000000000001',
+    tenantId,
     isLoading: false,
     isInitialized: false,
     setToken: (token: string | null) => {
       try {
         if (token) {
           localStorage.setItem('auth-token', token)
+          const extractedTenantId = extractTenantIdFromToken(token)
+          if (extractedTenantId) {
+            localStorage.setItem('auth-tenant-id', extractedTenantId)
+            set({ tenantId: extractedTenantId })
+          }
         } else {
           localStorage.removeItem('auth-token')
+          localStorage.removeItem('auth-tenant-id')
         }
       } catch {}
       set({ token })
@@ -62,6 +89,7 @@ const useAuth = create<AuthState>((set, get) => {
       try {
         localStorage.removeItem('auth-token')
         localStorage.removeItem('auth-email')
+        localStorage.removeItem('auth-tenant-id')
       } catch {}
       set({ token: null, email: null, isInitialized: true, isLoading: false })
     },

@@ -17,6 +17,7 @@ const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const product_entity_1 = require("./entities/product.entity");
+const uuid_1 = require("uuid");
 let ProductsService = class ProductsService {
     constructor(productRepo) {
         this.productRepo = productRepo;
@@ -32,15 +33,53 @@ let ProductsService = class ProductsService {
             take,
         });
     }
-    async findOne(id) {
-        return this.productRepo.findOne({ where: { id } });
+    async findOne(tenantId, id) {
+        const product = await this.productRepo.findOne({
+            where: { id, tenant_id: tenantId }
+        });
+        if (!product) {
+            throw new common_1.NotFoundException(`Product with ID ${id} not found`);
+        }
+        return product;
     }
-    async update(id, data) {
-        await this.productRepo.update(id, { ...data, updated_at: new Date() });
-        return this.findOne(id);
+    async update(tenantId, id, data) {
+        await this.findOne(tenantId, id); // Verify product exists and belongs to tenant
+        await this.productRepo.update({ id, tenant_id: tenantId }, { ...data, updated_at: new Date() });
+        return this.findOne(tenantId, id);
     }
-    async delete(id) {
-        return this.productRepo.delete(id);
+    async delete(tenantId, id) {
+        await this.findOne(tenantId, id); // Verify product exists and belongs to tenant
+        return this.productRepo.delete({ id, tenant_id: tenantId });
+    }
+    async initializeSampleData(tenantId) {
+        const sampleProducts = [
+            {
+                id: (0, uuid_1.v4)(),
+                name: 'Sample Product 1',
+                description: 'This is a sample product',
+                sku: 'SP-001',
+                price: 19.99,
+                cost: 9.99,
+                is_active: true,
+            },
+            {
+                id: (0, uuid_1.v4)(),
+                name: 'Sample Product 2',
+                description: 'Another sample product',
+                sku: 'SP-002',
+                price: 29.99,
+                cost: 14.99,
+                is_active: true,
+            },
+        ];
+        const products = sampleProducts.map(product => ({
+            ...product,
+            tenant_id: tenantId,
+            created_at: new Date(),
+            updated_at: new Date(),
+        }));
+        await this.productRepo.save(products);
+        return products;
     }
 };
 exports.ProductsService = ProductsService;

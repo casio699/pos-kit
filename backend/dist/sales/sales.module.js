@@ -13,12 +13,13 @@ const sales_service_1 = require("./sales.service");
 const sales_controller_1 = require("./sales.controller");
 const sale_entity_1 = require("./entities/sale.entity");
 const sale_line_entity_1 = require("./entities/sale-line.entity");
+const rbac_module_1 = require("../rbac/rbac.module");
 let SalesModule = class SalesModule {
 };
 exports.SalesModule = SalesModule;
 exports.SalesModule = SalesModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([sale_entity_1.Sale, sale_line_entity_1.SaleLine])],
+        imports: [typeorm_1.TypeOrmModule.forFeature([sale_entity_1.Sale, sale_line_entity_1.SaleLine]), rbac_module_1.RbacModule],
         providers: [sales_service_1.SalesService],
         controllers: [sales_controller_1.SalesController],
         exports: [sales_service_1.SalesService],

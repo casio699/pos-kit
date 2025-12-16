@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { useAuth } from '../store/auth'
 import { usePermissions } from '../hooks/usePermissions'
 import LoadingSpinner from '../components/LoadingSpinner'
+import { api } from '../api/client'
+import { toast } from 'sonner'
 
 interface Product {
   id: string
@@ -15,7 +16,6 @@ interface Product {
 }
 
 export default function Products() {
-  const { token } = useAuth()
   const { isAdmin } = usePermissions()
   const [loading, setLoading] = useState(false)
   const [products, setProducts] = useState<Product[]>([])
@@ -37,13 +37,23 @@ export default function Products() {
   const loadProducts = async () => {
     setLoading(true)
     try {
-      const response = await fetch('http://localhost:3000/products', {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      const data = await response.json()
-      setProducts(data)
-    } catch (error) {
+      const response = await api.get('/products')
+      const products = Array.isArray(response?.data) ? response.data : []
+      setProducts(products)
+      
+      if (products.length === 0) {
+        toast.info('No products found. Add your first product to get started!')
+      }
+    } catch (error: any) {
       console.error('Failed to load products:', error)
+      if (error.response?.status === 403) {
+        // New tenant with no products yet
+        setProducts([])
+        toast.info('Welcome to your new store! Start by adding your first product.')
+      } else {
+        const errorMsg = error.response?.data?.message || 'Failed to load products. Please try again later.'
+        toast.error(errorMsg)
+      }
     } finally {
       setLoading(false)
     }
@@ -55,44 +65,45 @@ export default function Products() {
 
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault()
+    setLoading(true)
     try {
-      const response = await fetch('http://localhost:3000/products', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          name: newProduct.name,
-          price: parseFloat(newProduct.price),
-          description: newProduct.description,
-          sku: newProduct.sku,
-          stock: parseInt(newProduct.stock),
-        }),
+      await api.post('/products', {
+        name: newProduct.name,
+        price: parseFloat(newProduct.price),
+        description: newProduct.description,
+        sku: newProduct.sku,
+        stock: newProduct.stock ? parseInt(newProduct.stock) : 0,
       })
 
-      if (response.ok) {
-        setNewProduct({ name: '', price: '', description: '', sku: '', stock: '' })
-        setShowCreateForm(false)
-        loadProducts()
-      }
-    } catch (error) {
+      setNewProduct({ name: '', price: '', description: '', sku: '', stock: '' })
+      setShowCreateForm(false)
+      toast.success('Product created successfully!')
+      await loadProducts()
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.message || 'Failed to create product'
       console.error('Failed to create product:', error)
+      toast.error(errorMsg)
+    } finally {
+      setLoading(false)
     }
   }
 
-  const filteredAndSortedProducts = products
+  const filteredAndSortedProducts = (products || [])
     .filter(product => {
-      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           product.sku?.toLowerCase().includes(searchTerm.toLowerCase())
+      if (!product) return false
       
-      const matchesPrice = (!priceRange.min || parseFloat(product.price) >= parseFloat(priceRange.min)) &&
-                          (!priceRange.max || parseFloat(product.price) <= parseFloat(priceRange.max))
+      const matchesSearch = product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (product.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (product.sku || '').toLowerCase().includes(searchTerm.toLowerCase())
       
+      const price = parseFloat(product.price || '0')
+      const minPrice = parseFloat(priceRange.min || '0')
+      const maxPrice = parseFloat(priceRange.max || '999999')
+      
+      const matchesPrice = price >= minPrice && price <= maxPrice
       const matchesStatus = statusFilter === 'all' || 
-                           (statusFilter === 'active' && product.is_active) ||
-                           (statusFilter === 'inactive' && !product.is_active)
+                          (statusFilter === 'active' && product.is_active !== false) ||
+                          (statusFilter === 'inactive' && product.is_active === false)
       
       return matchesSearch && matchesPrice && matchesStatus
     })

@@ -14,8 +14,11 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.InventoryController = void 0;
 const common_1 = require("@nestjs/common");
-const passport_1 = require("@nestjs/passport");
 const inventory_service_1 = require("./inventory.service");
+const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const permissions_guard_1 = require("../rbac/guards/permissions.guard");
+const permissions_decorator_1 = require("../rbac/decorators/permissions.decorator");
+const rbac_service_1 = require("../rbac/rbac.service");
 let InventoryController = class InventoryController {
     constructor(inventoryService) {
         this.inventoryService = inventoryService;
@@ -33,6 +36,7 @@ let InventoryController = class InventoryController {
 exports.InventoryController = InventoryController;
 __decorate([
     (0, common_1.Get)(),
+    (0, permissions_decorator_1.RequirePermission)(rbac_service_1.Permission.INVENTORY_READ),
     __param(0, (0, common_1.Query)('tenant_id')),
     __param(1, (0, common_1.Query)('location_id')),
     __param(2, (0, common_1.Query)('product_id')),
@@ -42,6 +46,7 @@ __decorate([
 ], InventoryController.prototype, "getInventory", null);
 __decorate([
     (0, common_1.Post)('adjust'),
+    (0, permissions_decorator_1.RequirePermission)(rbac_service_1.Permission.INVENTORY_ADJUST),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
@@ -49,6 +54,7 @@ __decorate([
 ], InventoryController.prototype, "adjustInventory", null);
 __decorate([
     (0, common_1.Post)('transfer'),
+    (0, permissions_decorator_1.RequirePermission)(rbac_service_1.Permission.INVENTORY_TRANSFER),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
@@ -56,7 +62,7 @@ __decorate([
 ], InventoryController.prototype, "transferInventory", null);
 exports.InventoryController = InventoryController = __decorate([
     (0, common_1.Controller)('inventory'),
-    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, permissions_guard_1.PermissionsGuard),
     __metadata("design:paramtypes", [inventory_service_1.InventoryService])
 ], InventoryController);
 //# sourceMappingURL=inventory.controller.js.map

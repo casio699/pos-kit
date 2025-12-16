@@ -14,37 +14,99 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SyncController = void 0;
 const common_1 = require("@nestjs/common");
-const passport_1 = require("@nestjs/passport");
+const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const sync_service_1 = require("./sync.service");
 let SyncController = class SyncController {
     constructor(syncService) {
         this.syncService = syncService;
     }
-    async syncEvents(body) {
-        return this.syncService.syncEvents(body.tenant_id, body.events);
+    async syncEvents(body, req) {
+        const tenantId = req.user.tenant_id || req.user.tenantId;
+        return this.syncService.syncEvents(tenantId, body.events);
     }
-    async getConflicts(tenant_id) {
-        return this.syncService.getConflicts(tenant_id);
+    async getConflicts(req) {
+        const tenantId = req.user.tenant_id || req.user.tenantId;
+        return this.syncService.getConflicts(tenantId);
+    }
+    async getPendingEvents(req, userId) {
+        const tenantId = req.user.tenant_id || req.user.tenantId;
+        return this.syncService.getPendingSyncEvents(tenantId, userId);
+    }
+    async createSyncEvent(body, req) {
+        const userId = req.user.id;
+        const tenantId = req.user.tenant_id || req.user.tenantId;
+        return this.syncService.createSyncEvent(userId, tenantId, body.eventType, body.resourceType, body.resourceId, body.data);
+    }
+    async retryFailedEvents(req) {
+        const tenantId = req.user.tenant_id || req.user.tenantId;
+        const retriedCount = await this.syncService.retryFailedEvents(tenantId);
+        return {
+            message: `Retried ${retriedCount} failed events`,
+            retried_count: retriedCount,
+        };
+    }
+    async getSyncStatus(req) {
+        const tenantId = req.user.tenant_id || req.user.tenantId;
+        const userId = req.user.id;
+        const pendingEvents = await this.syncService.getPendingSyncEvents(tenantId, userId);
+        const conflicts = await this.syncService.getConflicts(tenantId);
+        return {
+            pending_count: pendingEvents.length,
+            conflict_count: conflicts.length,
+            pending_events: pendingEvents,
+            conflicts,
+        };
     }
 };
 exports.SyncController = SyncController;
 __decorate([
     (0, common_1.Post)('events'),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], SyncController.prototype, "syncEvents", null);
 __decorate([
     (0, common_1.Get)('conflicts'),
-    __param(0, (0, common_1.Query)('tenant_id')),
+    __param(0, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], SyncController.prototype, "getConflicts", null);
+__decorate([
+    (0, common_1.Get)('pending'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Query)('userId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], SyncController.prototype, "getPendingEvents", null);
+__decorate([
+    (0, common_1.Post)('create-event'),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], SyncController.prototype, "createSyncEvent", null);
+__decorate([
+    (0, common_1.Post)('retry-failed'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], SyncController.prototype, "retryFailedEvents", null);
+__decorate([
+    (0, common_1.Get)('status'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], SyncController.prototype, "getSyncStatus", null);
 exports.SyncController = SyncController = __decorate([
     (0, common_1.Controller)('sync'),
-    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __metadata("design:paramtypes", [sync_service_1.SyncService])
 ], SyncController);
 //# sourceMappingURL=sync.controller.js.map
