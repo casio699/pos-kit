@@ -89,7 +89,7 @@ export default function Products() {
         stock: newProduct.stock ? parseInt(newProduct.stock) : 0,
       })
 
-      setNewProduct({ name: '', price: '', description: '', sku: '', stock: '' })
+      setNewProduct({ name: '', price: '', description: '', sku: '', stock: '', category: '' })
       setShowCreateForm(false)
       toast.success('Product created successfully!')
       await loadProducts()
