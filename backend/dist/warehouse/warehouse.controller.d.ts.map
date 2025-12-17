@@ -1,1 +1,0 @@
-{"version":3,"file":"warehouse.controller.d.ts","sourceRoot":"","sources":["../../src/warehouse/warehouse.controller.ts"],"names":[],"mappings":"AAEA,OAAO,EAAE,gBAAgB,EAAE,MAAM,qBAAqB,CAAC;AAEvD,qBAEa,mBAAmB;IAClB,OAAO,CAAC,gBAAgB;gBAAhB,gBAAgB,EAAE,gBAAgB;IAGhD,cAAc,CAAS,IAAI,EAAE,GAAG;IAKhC,aAAa,CAAqB,SAAS,EAAE,MAAM;CAG1D"}

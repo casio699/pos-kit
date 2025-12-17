@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react'
 import { usePermissions } from '../hooks/usePermissions'
+import { useAuth } from '../store/auth'
 import { motion } from 'framer-motion'
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { reportsApi } from '../api/client'
+import { toast } from 'sonner'
+import { RefreshCw } from 'lucide-react'
 
 interface DashboardStats {
   totalProducts: number
@@ -17,6 +21,7 @@ interface DashboardStats {
 
 export default function Dashboard() {
   const { } = usePermissions()
+  const { tenantId } = useAuth()
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<DashboardStats>({
     totalProducts: 0,
@@ -29,30 +34,11 @@ export default function Dashboard() {
     topProducts: [],
     recentOrders: [],
   })
-
-  // Sample chart data
-  const salesData = [
-    { month: 'Jan', sales: 4000, revenue: 2400 },
-    { month: 'Feb', sales: 3000, revenue: 1398 },
-    { month: 'Mar', sales: 2000, revenue: 9800 },
-    { month: 'Apr', sales: 2780, revenue: 3908 },
-    { month: 'May', sales: 1890, revenue: 4800 },
-    { month: 'Jun', sales: 2390, revenue: 3800 },
-  ]
-
-  const categoryData = [
-    { name: 'Electronics', value: 400, color: '#0088FE' },
-    { name: 'Clothing', value: 300, color: '#00C49F' },
-    { name: 'Food', value: 300, color: '#FFBB28' },
-    { name: 'Books', value: 200, color: '#FF8042' },
-  ]
-
-  const inventoryData = [
-    { category: 'Electronics', inStock: 45, lowStock: 12, outOfStock: 3 },
-    { category: 'Clothing', inStock: 38, lowStock: 8, outOfStock: 2 },
-    { category: 'Food', inStock: 25, lowStock: 15, outOfStock: 5 },
-    { category: 'Books', inStock: 52, lowStock: 6, outOfStock: 1 },
-  ]
+  const [salesData, setSalesData] = useState<any[]>([])
+  const [categoryData, setCategoryData] = useState<any[]>([])
+  const [inventoryData, setInventoryData] = useState<any[]>([])
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
 
   // Animation variants
   const containerVariants = {
@@ -91,41 +77,128 @@ export default function Dashboard() {
   }
 
   useEffect(() => {
-    loadDashboardData()
-  }, [])
+    if (tenantId) {
+      loadDashboardData()
+    }
+  }, [tenantId])
+
+  // Auto-refresh every 5 minutes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (tenantId && !loading) {
+        loadDashboardData()
+      }
+    }, 5 * 60 * 1000) // 5 minutes
+
+    return () => clearInterval(interval)
+  }, [tenantId, loading])
+
+  const handleRefresh = async () => {
+    if (!tenantId || isRefreshing) return
+    
+    setIsRefreshing(true)
+    try {
+      await loadDashboardData()
+      setLastRefresh(new Date())
+      toast.success('Dashboard refreshed successfully')
+    } catch (error) {
+      toast.error('Failed to refresh dashboard')
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
 
   const loadDashboardData = async () => {
+    if (!tenantId) return
+    
     setLoading(true)
     try {
-      // Mock data for now - in a real app, this would come from API calls
-      setStats({
-        totalProducts: 156,
-        totalSales: 1247,
-        totalRevenue: 28456.78,
-        pendingOrders: 23,
-        lowStockItems: 8,
-        salesGrowth: 12.5,
-        recentActivity: [
-          { type: 'sale', description: 'Product A sold', time: '2 mins ago', amount: 29.99 },
-          { type: 'inventory', description: 'Low stock alert for Product B', time: '15 mins ago', quantity: 3 },
-          { type: 'order', description: 'New order #1234', time: '1 hour ago', amount: 156.78 },
-          { type: 'product', description: 'New product added', time: '2 hours ago', name: 'Premium Widget' },
-        ],
-        topProducts: [
-          { name: 'Premium Widget', sales: 234, revenue: 7021.26 },
-          { name: 'Basic Widget', sales: 189, revenue: 3780.00 },
-          { name: 'Deluxe Widget', sales: 156, revenue: 6240.00 },
-          { name: 'Standard Widget', sales: 145, revenue: 2900.00 },
-        ],
-        recentOrders: [
-          { id: 'ORD-001', customer: 'John Doe', amount: 156.78, status: 'completed', time: '2 mins ago' },
-          { id: 'ORD-002', customer: 'Jane Smith', amount: 89.99, status: 'processing', time: '15 mins ago' },
-          { id: 'ORD-003', customer: 'Bob Johnson', amount: 234.56, status: 'pending', time: '1 hour ago' },
-          { id: 'ORD-004', customer: 'Alice Brown', amount: 67.89, status: 'completed', time: '2 hours ago' },
-        ],
-      })
+      // Load all dashboard data in parallel
+      const [
+        dashboardStats,
+        salesAnalytics,
+        inventoryHealth,
+        topProducts,
+        recentOrders,
+      ] = await Promise.allSettled([
+        reportsApi.getDashboardStats(tenantId).catch(() => ({ data: null })),
+        reportsApi.getSalesAnalytics(tenantId, { period: '6months' }).catch(() => ({ data: null })),
+        reportsApi.getInventoryHealth(tenantId).catch(() => ({ data: null })),
+        reportsApi.getTopProducts(tenantId, { limit: 10 }).catch(() => ({ data: null })),
+        reportsApi.getRecentOrders(tenantId, { limit: 10 }).catch(() => ({ data: null })),
+      ])
+
+      // Process dashboard stats
+      if (dashboardStats.status === 'fulfilled' && dashboardStats.value.data) {
+        const data = dashboardStats.value.data
+        setStats({
+          totalProducts: data.totalProducts || 0,
+          totalSales: data.totalSales || 0,
+          totalRevenue: data.totalRevenue || 0,
+          pendingOrders: data.pendingOrders || 0,
+          lowStockItems: data.lowStockItems || 0,
+          recentActivity: data.recentActivity || [],
+          salesGrowth: data.salesGrowth || 0,
+          topProducts: data.topProducts || [],
+          recentOrders: data.recentOrders || [],
+        })
+      } else {
+        // Use fallback data if API fails
+        setStats({
+          totalProducts: 0,
+          totalSales: 0,
+          totalRevenue: 0,
+          pendingOrders: 0,
+          lowStockItems: 0,
+          recentActivity: [],
+          salesGrowth: 0,
+          topProducts: [],
+          recentOrders: [],
+        })
+      }
+
+      // Process sales analytics
+      if (salesAnalytics.status === 'fulfilled' && salesAnalytics.value.data) {
+        setSalesData(salesAnalytics.value.data.chartData || [])
+      } else {
+        // Fallback chart data
+        setSalesData([
+          { month: 'Jan', sales: 0, revenue: 0 },
+          { month: 'Feb', sales: 0, revenue: 0 },
+          { month: 'Mar', sales: 0, revenue: 0 },
+          { month: 'Apr', sales: 0, revenue: 0 },
+          { month: 'May', sales: 0, revenue: 0 },
+          { month: 'Jun', sales: 0, revenue: 0 },
+        ])
+      }
+
+      // Process inventory health
+      if (inventoryHealth.status === 'fulfilled' && inventoryHealth.value.data) {
+        const health = inventoryHealth.value.data
+        setCategoryData(health.categoryBreakdown || [])
+        setInventoryData(health.inventoryStatus || [])
+      } else {
+        // Fallback data
+        setCategoryData([
+          { name: 'No Data', value: 1, color: '#e5e7eb' },
+        ])
+        setInventoryData([
+          { category: 'No Data', inStock: 0, lowStock: 0, outOfStock: 0 },
+        ])
+      }
+
+      // Update top products and recent orders if available
+      if (topProducts.status === 'fulfilled' && topProducts.value.data) {
+        setStats(prev => ({ ...prev, topProducts: topProducts.value.data }))
+      }
+
+      if (recentOrders.status === 'fulfilled' && recentOrders.value.data) {
+        setStats(prev => ({ ...prev, recentOrders: recentOrders.value.data }))
+      }
+
     } catch (error) {
       console.error('Failed to load dashboard data:', error)
+      toast.error('Failed to load dashboard data')
     } finally {
       setLoading(false)
     }
@@ -148,8 +221,27 @@ export default function Dashboard() {
     >
       {/* Header Section */}
       <motion.div variants={itemVariants} className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg shadow-lg p-6 text-white">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-2">Dashboard Overview</h1>
-        <p className="text-blue-100">Welcome back! Here's what's happening with your business today.</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold mb-2">Dashboard Overview</h1>
+            <p className="text-blue-100">Welcome back! Here's what's happening with your business today.</p>
+          </div>
+          <div className="flex items-center space-x-3">
+            <span className="text-xs text-blue-200">
+              Last updated: {lastRefresh.toLocaleTimeString()}
+            </span>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="bg-white/20 hover:bg-white/30 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg p-2 transition-colors"
+              title="Refresh dashboard"
+            >
+              <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </motion.button>
+          </div>
+        </div>
       </motion.div>
 
       {/* Key Metrics Cards */}

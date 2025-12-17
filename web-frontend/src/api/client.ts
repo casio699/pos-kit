@@ -131,6 +131,17 @@ export const rbacApi = {
   initializeRoles: () => api.post('/rbac/initialize-roles'),
 }
 
+export const reportsApi = {
+  getDashboardStats: (tenant_id: string) => api.get('/reports/dashboard', { params: { tenant_id } }),
+  getInventoryHealth: (tenant_id: string) => api.get('/reports/inventory-health', { params: { tenant_id } }),
+  getSalesAnalytics: (tenant_id: string, params?: { period?: string }) => 
+    api.get('/reports/sales-analytics', { params: { tenant_id, ...(params || {}) } }),
+  getTopProducts: (tenant_id: string, params?: { limit?: number }) =>
+    api.get('/reports/top-products', { params: { tenant_id, ...(params || {}) } }),
+  getRecentOrders: (tenant_id: string, params?: { limit?: number }) =>
+    api.get('/reports/recent-orders', { params: { tenant_id, ...(params || {}) } }),
+}
+
 // Create a unified client object
 export const apiClient = {
   // Auth
@@ -158,6 +169,7 @@ export const apiClient = {
   paymentApi,
   shopifyApi,
   rbacApi,
+  reportsApi,
   
   // RBAC direct methods
   listRoles: rbacApi.listRoles,

@@ -3,6 +3,7 @@ import { usePermissions } from '../hooks/usePermissions'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { api } from '../api/client'
 import { toast } from 'sonner'
+import { Calendar, Filter, X, ChevronDown } from 'lucide-react'
 
 interface Product {
   id: string
@@ -13,6 +14,9 @@ interface Product {
   stock?: number
   created_at: string
   is_active: boolean
+  category?: string
+  cost?: string
+  updated_at?: string
 }
 
 export default function Products() {
@@ -26,12 +30,18 @@ export default function Products() {
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table')
   const [priceRange, setPriceRange] = useState({ min: '', max: '' })
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
+  const [stockFilter, setStockFilter] = useState<'all' | 'instock' | 'lowstock' | 'outofstock'>('all')
+  const [categoryFilter, setCategoryFilter] = useState<string>('all')
+  const [dateRange, setDateRange] = useState({ start: '', end: '' })
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const [availableCategories, setAvailableCategories] = useState<string[]>([])
   const [newProduct, setNewProduct] = useState({
     name: '',
     price: '',
     description: '',
     sku: '',
     stock: '',
+    category: '',
   })
 
   const loadProducts = async () => {
@@ -40,6 +50,10 @@ export default function Products() {
       const response = await api.get('/products')
       const products = Array.isArray(response?.data) ? response.data : []
       setProducts(products)
+      
+      // Extract unique categories from products
+      const categories = [...new Set(products.map(p => p.category).filter(Boolean))]
+      setAvailableCategories(categories)
       
       if (products.length === 0) {
         toast.info('No products found. Add your first product to get started!')
@@ -75,7 +89,7 @@ export default function Products() {
         stock: newProduct.stock ? parseInt(newProduct.stock) : 0,
       })
 
-      setNewProduct({ name: '', price: '', description: '', sku: '', stock: '' })
+      setNewProduct({ name: '', price: '', description: '', sku: '', stock: '', category: '' })
       setShowCreateForm(false)
       toast.success('Product created successfully!')
       await loadProducts()
@@ -92,20 +106,42 @@ export default function Products() {
     .filter(product => {
       if (!product) return false
       
+      // Search filter
       const matchesSearch = product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           (product.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                           (product.sku || '').toLowerCase().includes(searchTerm.toLowerCase())
       
+      // Price filter
       const price = parseFloat(product.price || '0')
       const minPrice = parseFloat(priceRange.min || '0')
       const maxPrice = parseFloat(priceRange.max || '999999')
-      
       const matchesPrice = price >= minPrice && price <= maxPrice
+      
+      // Status filter
       const matchesStatus = statusFilter === 'all' || 
                           (statusFilter === 'active' && product.is_active !== false) ||
                           (statusFilter === 'inactive' && product.is_active === false)
       
-      return matchesSearch && matchesPrice && matchesStatus
+      // Stock filter
+      const stock = product.stock || 0
+      let matchesStock = true
+      if (stockFilter === 'instock') matchesStock = stock > 10
+      else if (stockFilter === 'lowstock') matchesStock = stock > 0 && stock <= 10
+      else if (stockFilter === 'outofstock') matchesStock = stock === 0
+      
+      // Category filter
+      const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter
+      
+      // Date range filter
+      let matchesDate = true
+      if (dateRange.start || dateRange.end) {
+        const productDate = new Date(product.created_at)
+        const startDate = dateRange.start ? new Date(dateRange.start) : new Date('1900-01-01')
+        const endDate = dateRange.end ? new Date(dateRange.end) : new Date('2100-12-31')
+        matchesDate = productDate >= startDate && productDate <= endDate
+      }
+      
+      return matchesSearch && matchesPrice && matchesStatus && matchesStock && matchesCategory && matchesDate
     })
     .sort((a, b) => {
       if (sortBy === 'name') return a.name.localeCompare(b.name)
@@ -171,7 +207,8 @@ export default function Products() {
 
       {/* Advanced Search and Filters */}
       <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4">
+        {/* Main Search Bar */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
           <div className="lg:col-span-2">
             <div className="relative">
               <svg className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -208,35 +245,167 @@ export default function Products() {
           </select>
         </div>
 
-        {/* Price Range Filter */}
-        <div className="flex flex-wrap items-center gap-4 pb-4 border-b">
-          <span className="text-sm font-medium text-gray-700">Price Range:</span>
-          <div className="flex items-center gap-2">
-            <input
-              type="number"
-              placeholder="Min"
-              value={priceRange.min}
-              onChange={e => setPriceRange(prev => ({ ...prev, min: e.target.value }))}
-              className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-            />
-            <span className="text-gray-500">-</span>
-            <input
-              type="number"
-              placeholder="Max"
-              value={priceRange.max}
-              onChange={e => setPriceRange(prev => ({ ...prev, max: e.target.value }))}
-              className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-            />
+        {/* Advanced Filters Toggle */}
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+            className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors"
+          >
+            <Filter className="w-4 h-4" />
+            Advanced Filters
+            <ChevronDown className={`w-4 h-4 transform transition-transform ${showAdvancedFilters ? 'rotate-180' : ''}`} />
+          </button>
+          
+          {/* Active Filters Display */}
+          <div className="flex flex-wrap gap-2">
+            {priceRange.min && priceRange.max && (
+              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs flex items-center gap-1">
+                Price: ${priceRange.min} - ${priceRange.max}
+                <button onClick={() => setPriceRange({ min: '', max: '' })}>
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {stockFilter !== 'all' && (
+              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs flex items-center gap-1">
+                Stock: {stockFilter.replace(/([A-Z])/g, ' $1').trim()}
+                <button onClick={() => setStockFilter('all')}>
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {categoryFilter !== 'all' && (
+              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs flex items-center gap-1">
+                Category: {categoryFilter}
+                <button onClick={() => setCategoryFilter('all')}>
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {(dateRange.start || dateRange.end) && (
+              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs flex items-center gap-1">
+                Date Range
+                <button onClick={() => setDateRange({ start: '', end: '' })}>
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
           </div>
-          {(priceRange.min || priceRange.max) && (
-            <button
-              onClick={() => setPriceRange({ min: '', max: '' })}
-              className="text-sm text-blue-600 hover:text-blue-800"
-            >
-              Clear Price Filter
-            </button>
-          )}
         </div>
+
+        {/* Advanced Filters Panel */}
+        {showAdvancedFilters && (
+          <div className="border-t pt-6 space-y-6">
+            {/* Price and Stock Filters */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Price Range</label>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <input
+                      type="number"
+                      placeholder="Min price"
+                      value={priceRange.min}
+                      onChange={e => setPriceRange(prev => ({ ...prev, min: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    />
+                  </div>
+                  <span className="text-gray-500">to</span>
+                  <div className="flex-1">
+                    <input
+                      type="number"
+                      placeholder="Max price"
+                      value={priceRange.max}
+                      onChange={e => setPriceRange(prev => ({ ...prev, max: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Stock Level</label>
+                <select
+                  value={stockFilter}
+                  onChange={e => setStockFilter(e.target.value as any)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                >
+                  <option value="all">All Stock Levels</option>
+                  <option value="instock">In Stock (&gt;10)</option>
+                  <option value="lowstock">Low Stock (1-10)</option>
+                  <option value="outofstock">Out of Stock</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Category and Date Range Filters */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Category</label>
+                <select
+                  value={categoryFilter}
+                  onChange={e => setCategoryFilter(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                >
+                  <option value="all">All Categories</option>
+                  {availableCategories.map(category => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Date Range</label>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <div className="relative">
+                      <Calendar className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="date"
+                        placeholder="Start date"
+                        value={dateRange.start}
+                        onChange={e => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                      />
+                    </div>
+                  </div>
+                  <span className="text-gray-500">to</span>
+                  <div className="flex-1">
+                    <div className="relative">
+                      <Calendar className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="date"
+                        placeholder="End date"
+                        value={dateRange.end}
+                        onChange={e => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Clear All Filters */}
+            <div className="flex justify-end">
+              <button
+                onClick={() => {
+                  setPriceRange({ min: '', max: '' })
+                  setStockFilter('all')
+                  setCategoryFilter('all')
+                  setDateRange({ start: '', end: '' })
+                  setSearchTerm('')
+                  setStatusFilter('all')
+                }}
+                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Clear All Filters
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Bulk Actions */}
         {selectedProducts.length > 0 && (

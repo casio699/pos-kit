@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../store/auth'
 import { usePermissions } from '../hooks/usePermissions'
+import NotificationCenter from './NotificationCenter'
 
 export default function Navbar() {
   const location = useLocation()
@@ -35,6 +36,7 @@ export default function Navbar() {
       <div className="flex items-center gap-2 sm:gap-3">
         {email ? (
           <>
+            <NotificationCenter />
             <span className="text-xs sm:text-sm text-gray-700 hidden sm:inline">{email}</span>
             <span className="text-xs text-gray-700 sm:hidden">User</span>
             <button

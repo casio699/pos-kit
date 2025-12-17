@@ -1,0 +1,14 @@
+/home/casio699/projects/pos-kit/desktop-client/src-tauri/target/debug/deps/serde-4117cd8d6bc293ee.d: /home/casio699/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /home/casio699/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /home/casio699/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /home/casio699/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /home/casio699/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /home/casio699/projects/pos-kit/desktop-client/src-tauri/target/debug/build/serde-acd5b2669130c5a6/out/private.rs
+
+/home/casio699/projects/pos-kit/desktop-client/src-tauri/target/debug/deps/libserde-4117cd8d6bc293ee.rlib: /home/casio699/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /home/casio699/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /home/casio699/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /home/casio699/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /home/casio699/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /home/casio699/projects/pos-kit/desktop-client/src-tauri/target/debug/build/serde-acd5b2669130c5a6/out/private.rs
+
+/home/casio699/projects/pos-kit/desktop-client/src-tauri/target/debug/deps/libserde-4117cd8d6bc293ee.rmeta: /home/casio699/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /home/casio699/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /home/casio699/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /home/casio699/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /home/casio699/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /home/casio699/projects/pos-kit/desktop-client/src-tauri/target/debug/build/serde-acd5b2669130c5a6/out/private.rs
+
+/home/casio699/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs:
+/home/casio699/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs:
+/home/casio699/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs:
+/home/casio699/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs:
+/home/casio699/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs:
+/home/casio699/projects/pos-kit/desktop-client/src-tauri/target/debug/build/serde-acd5b2669130c5a6/out/private.rs:
+
+# env-dep:OUT_DIR=/home/casio699/projects/pos-kit/desktop-client/src-tauri/target/debug/build/serde-acd5b2669130c5a6/out

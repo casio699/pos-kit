@@ -56,7 +56,7 @@ import { AuditController } from './audit/audit.controller';
     WebhooksModule,
     SyncModule,
     PaymentsModule,
-    ShopifyModule,
+    // ShopifyModule, // Temporarily disabled for Docker setup
     RbacModule,
     AuditModule,
   ],
