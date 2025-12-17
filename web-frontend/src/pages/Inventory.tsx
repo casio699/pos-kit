@@ -3,6 +3,8 @@ import { useAuth } from '../store/auth'
 import { usePermissions } from '../hooks/usePermissions'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { listProducts, listInventory, createLocation, listLocations, adjustInventory } from '../api/client'
+import { toast } from 'sonner'
+import { Package, MapPin, AlertTriangle, CheckSquare, Square, Download, Edit, Trash2 } from 'lucide-react'
 
 interface Product { id: string; sku: string; name: string }
 interface Location { id: string; name: string; type?: string }
@@ -25,6 +27,14 @@ export default function Inventory() {
   const [selectedLocation, setSelectedLocation] = useState<string>('all')
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table')
   const [showLowStockOnly, setShowLowStockOnly] = useState(false)
+  const [selectedItems, setSelectedItems] = useState<string[]>([])
+  const [showBulkActions, setShowBulkActions] = useState(false)
+  const [bulkAdjustModal, setBulkAdjustModal] = useState(false)
+  const [bulkAdjustData, setBulkAdjustData] = useState({
+    operation: 'add' as 'add' | 'subtract' | 'set',
+    quantity: 0,
+    locationId: '',
+  })
 
   const [products, setProducts] = useState<Product[]>([])
   const [locations, setLocations] = useState<Location[]>([])
@@ -90,6 +100,99 @@ export default function Inventory() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Bulk operations functions
+  const toggleItemSelection = (itemId: string) => {
+    setSelectedItems(prev => 
+      prev.includes(itemId) 
+        ? prev.filter(id => id !== itemId)
+        : [...prev, itemId]
+    )
+  }
+
+  const toggleAllItems = () => {
+    if (selectedItems.length === filteredItems.length) {
+      setSelectedItems([])
+    } else {
+      setSelectedItems(filteredItems.map(item => item.id))
+    }
+  }
+
+  const handleBulkAdjust = async () => {
+    if (selectedItems.length === 0 || !bulkAdjustData.locationId) return
+    
+    setLoading(true)
+    try {
+      // Process each selected item
+      const promises = selectedItems.map(itemId => {
+        const item = items.find(i => i.id === itemId)
+        if (!item) return Promise.resolve()
+        
+        let newQuantity = item.qty_available
+        if (bulkAdjustData.operation === 'add') {
+          newQuantity += bulkAdjustData.quantity
+        } else if (bulkAdjustData.operation === 'subtract') {
+          newQuantity = Math.max(0, newQuantity - bulkAdjustData.quantity)
+        } else if (bulkAdjustData.operation === 'set') {
+          newQuantity = bulkAdjustData.quantity
+        }
+        
+        return adjustInventory(tenantId, {
+          product_id: item.product_id,
+          location_id: bulkAdjustData.locationId,
+          quantity: newQuantity - item.qty_available
+        })
+      })
+      
+      await Promise.all(promises)
+      
+      toast.success(`Successfully adjusted ${selectedItems.length} inventory items`)
+      setSelectedItems([])
+      setBulkAdjustModal(false)
+      setBulkAdjustData({ operation: 'add', quantity: 0, locationId: '' })
+      await loadAll()
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Failed to adjust inventory')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleBulkExport = () => {
+    const selectedData = selectedItems.map(itemId => {
+      const item = items.find(i => i.id === itemId)
+      const product = products.find(p => p.id === item?.product_id)
+      const location = locations.find(l => l.id === item?.location_id)
+      
+      return {
+        SKU: product?.sku || '',
+        Product: product?.name || '',
+        Location: location?.name || '',
+        Quantity: item?.qty_available || 0,
+        'Last Updated': item?.last_updated || item?.created_at,
+      }
+    })
+    
+    // Convert to CSV
+    const headers = Object.keys(selectedData[0] || {})
+    const csvContent = [
+      headers.join(','),
+      ...selectedData.map(row => headers.map(header => row[header]).join(','))
+    ].join('\n')
+    
+    // Download CSV
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `inventory_export_${new Date().toISOString().split('T')[0]}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+    
+    toast.success('Inventory exported successfully')
   }
 
   // Add filtering logic after the onAdjust function
@@ -267,74 +370,135 @@ export default function Inventory() {
             </p>
           </div>
         ) : viewMode === 'table' ? (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="py-4 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                  <th className="py-4 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-                  <th className="py-4 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
-                  <th className="py-4 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="py-4 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Last Updated</th>
-                  <th className="py-4 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredItems.map(item => {
-                  const product = products.find(p => p.id === item.product_id)
-                  const location = locations.find(l => l.id === item.location_id)
-                  const isLowStock = item.qty_available <= 10
-                  const isOutOfStock = item.qty_available === 0
-                  
-                  return (
-                    <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="py-4 px-4">
-                        <div className="flex items-center">
-                          <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-teal-600 rounded-lg flex items-center justify-center text-white font-bold mr-3">
-                            {product?.name.charAt(0).toUpperCase()}
-                          </div>
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">{product?.name}</div>
-                            <div className="text-xs text-gray-500">{product?.sku}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="text-sm text-gray-900">{location?.name}</div>
-                        <div className="text-xs text-gray-500">{location?.type}</div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="text-lg font-semibold text-gray-900">{item.qty_available}</div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          isOutOfStock 
-                            ? 'bg-red-100 text-red-800'
-                            : isLowStock 
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-green-100 text-green-800'
-                        }`}>
-                          {isOutOfStock ? 'Out of Stock' : isLowStock ? 'Low Stock' : 'In Stock'}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 hidden lg:table-cell text-xs text-gray-500">
-                        {item.last_updated ? new Date(item.last_updated).toLocaleDateString() : 'Never'}
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="flex gap-2">
-                          <button className="text-green-600 hover:text-green-800 text-sm font-medium">
-                            Adjust
+          <div>
+            {/* Bulk Actions Bar */}
+            {selectedItems.length > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <span className="text-sm font-medium text-blue-900">
+                    {selectedItems.length} item{selectedItems.length !== 1 ? 's' : ''} selected
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setBulkAdjustModal(true)}
+                      className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 flex items-center gap-1"
+                    >
+                      <Edit className="w-3 h-3" />
+                      Bulk Adjust
+                    </button>
+                    <button
+                      onClick={handleBulkExport}
+                      className="px-3 py-1.5 bg-white border border-blue-300 rounded-lg text-sm text-blue-700 hover:bg-blue-50 flex items-center gap-1"
+                    >
+                      <Download className="w-3 h-3" />
+                      Export
+                    </button>
+                    <button
+                      onClick={() => setSelectedItems([])}
+                      className="px-3 py-1.5 bg-white border border-blue-300 rounded-lg text-sm text-blue-700 hover:bg-blue-50"
+                    >
+                      Clear Selection
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="py-4 px-4 text-left">
+                      <button
+                        onClick={toggleAllItems}
+                        className="flex items-center text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700"
+                      >
+                        {selectedItems.length === filteredItems.length && filteredItems.length > 0 ? (
+                          <CheckSquare className="w-4 h-4 mr-2 text-blue-600" />
+                        ) : (
+                          <Square className="w-4 h-4 mr-2" />
+                        )}
+                        Select
+                      </button>
+                    </th>
+                    <th className="py-4 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
+                    <th className="py-4 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                    <th className="py-4 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                    <th className="py-4 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="py-4 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Last Updated</th>
+                    <th className="py-4 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filteredItems.map(item => {
+                    const product = products.find(p => p.id === item.product_id)
+                    const location = locations.find(l => l.id === item.location_id)
+                    const isLowStock = item.qty_available <= 10
+                    const isOutOfStock = item.qty_available === 0
+                    const isSelected = selectedItems.includes(item.id)
+                    
+                    return (
+                      <tr key={item.id} className={`hover:bg-gray-50 transition-colors ${isSelected ? 'bg-blue-50' : ''}`}>
+                        <td className="py-4 px-4">
+                          <button
+                            onClick={() => toggleItemSelection(item.id)}
+                            className="flex items-center"
+                          >
+                            {isSelected ? (
+                              <CheckSquare className="w-4 h-4 text-blue-600" />
+                            ) : (
+                              <Square className="w-4 h-4" />
+                            )}
                           </button>
-                          <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                            History
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex items-center">
+                            <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-teal-600 rounded-lg flex items-center justify-center text-white font-bold mr-3">
+                              {product?.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">{product?.name}</div>
+                              <div className="text-xs text-gray-500">{product?.sku}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="text-sm text-gray-900">{location?.name}</div>
+                          <div className="text-xs text-gray-500">{location?.type}</div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="text-lg font-semibold text-gray-900">{item.qty_available}</div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            isOutOfStock 
+                              ? 'bg-red-100 text-red-800'
+                              : isLowStock 
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-green-100 text-green-800'
+                          }`}>
+                            {isOutOfStock ? 'Out of Stock' : isLowStock ? 'Low Stock' : 'In Stock'}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 hidden lg:table-cell text-xs text-gray-500">
+                          {item.last_updated ? new Date(item.last_updated).toLocaleDateString() : 'Never'}
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex gap-2">
+                            <button className="text-green-600 hover:text-green-800 text-sm font-medium">
+                              Adjust
+                            </button>
+                            <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                              History
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         ) : (
           /* Cards View */
@@ -472,6 +636,83 @@ export default function Inventory() {
                 {loading ? 'Adjusting...' : 'Adjust Inventory'}
               </button>
               {error && <span className="text-sm text-red-600">{error}</span>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Adjustment Modal */}
+      {bulkAdjustModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Bulk Adjust Inventory</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Operation</label>
+                <select
+                  value={bulkAdjustData.operation}
+                  onChange={e => setBulkAdjustData(prev => ({ ...prev, operation: e.target.value as any }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="add">Add Quantity</option>
+                  <option value="subtract">Subtract Quantity</option>
+                  <option value="set">Set Quantity</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {bulkAdjustData.operation === 'set' ? 'New Quantity' : 'Quantity'}
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={bulkAdjustData.quantity}
+                  onChange={e => setBulkAdjustData(prev => ({ ...prev, quantity: parseInt(e.target.value) || 0 }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter quantity"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Target Location</label>
+                <select
+                  value={bulkAdjustData.locationId}
+                  onChange={e => setBulkAdjustData(prev => ({ ...prev, locationId: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">Select a location</option>
+                  {locations.map(loc => (
+                    <option key={loc.id} value={loc.id}>{loc.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm text-blue-800">
+                  This will adjust {selectedItems.length} selected item{selectedItems.length !== 1 ? 's' : ''}.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setBulkAdjustModal(false)
+                  setBulkAdjustData({ operation: 'add', quantity: 0, locationId: '' })
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkAdjust}
+                disabled={!bulkAdjustData.locationId || bulkAdjustData.quantity < 0 || loading}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Processing...' : 'Adjust Items'}
+              </button>
             </div>
           </div>
         </div>

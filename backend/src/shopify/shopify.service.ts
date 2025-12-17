@@ -13,7 +13,8 @@ export class ShopifyService {
     const accessToken = this.configService.get<string>('SHOPIFY_ADMIN_ACCESS_TOKEN');
     
     if (!storeUrl || !accessToken) {
-      throw new Error('SHOPIFY_STORE_URL and SHOPIFY_ADMIN_ACCESS_TOKEN must be configured');
+      this.logger.warn('Shopify credentials not configured. Shopify integration will be disabled.');
+      return;
     }
     
     this.shopify = shopifyApi({

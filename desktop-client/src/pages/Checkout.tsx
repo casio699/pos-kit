@@ -1,6 +1,27 @@
 import React, { useState } from 'react'
-import { ShoppingCart, Trash2, CreditCard, DollarSign } from 'lucide-react'
-import { useStore } from '../store/useStore'
+import { 
+  ShoppingCart, 
+  Trash2, 
+  CreditCard, 
+  DollarSign, 
+  Plus, 
+  Minus, 
+  Search,
+  Package,
+  User,
+  Receipt,
+  Smartphone,
+  Wallet,
+  Printer,
+  X
+} from 'lucide-react'
+import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
+import { Badge } from '../components/ui/badge'
+import { Separator } from '../components/ui/separator'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
+import { formatCurrency } from '../lib/utils'
 
 interface CartItem {
   id: string
@@ -49,137 +70,315 @@ export default function Checkout() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <div className="grid grid-cols-3 gap-6">
-        {/* Barcode Scanner */}
-        <div className="col-span-2">
-          <div className="bg-white rounded-lg shadow p-6 mb-6">
-            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-              <ShoppingCart className="w-6 h-6" />
-              Checkout
-            </h2>
-            
-            <form onSubmit={handleBarcodeSubmit} className="mb-6">
-              <input
-                type="text"
-                placeholder="Scan barcode or enter SKU..."
-                value={barcode}
-                onChange={(e) => setBarcode(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                autoFocus
-              />
-            </form>
-
-            {/* Cart Items */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-100 border-b">
-                  <tr>
-                    <th className="text-left px-4 py-2">SKU</th>
-                    <th className="text-left px-4 py-2">Product</th>
-                    <th className="text-center px-4 py-2">Qty</th>
-                    <th className="text-right px-4 py-2">Price</th>
-                    <th className="text-right px-4 py-2">Discount</th>
-                    <th className="text-right px-4 py-2">Total</th>
-                    <th className="text-center px-4 py-2">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {cart.map(item => (
-                    <tr key={item.id} className="border-b hover:bg-gray-50">
-                      <td className="px-4 py-2 font-mono text-xs">{item.sku}</td>
-                      <td className="px-4 py-2">{item.name}</td>
-                      <td className="px-4 py-2 text-center">
-                        <input
-                          type="number"
-                          min="1"
-                          value={item.quantity}
-                          onChange={(e) => handleQuantityChange(item.id, parseInt(e.target.value))}
-                          className="w-12 px-2 py-1 border border-gray-300 rounded text-center"
-                        />
-                      </td>
-                      <td className="px-4 py-2 text-right">${item.price.toFixed(2)}</td>
-                      <td className="px-4 py-2 text-right text-red-600">${item.discount.toFixed(2)}</td>
-                      <td className="px-4 py-2 text-right font-semibold">
-                        ${((item.price * item.quantity) - item.discount).toFixed(2)}
-                      </td>
-                      <td className="px-4 py-2 text-center">
-                        <button
-                          onClick={() => handleRemoveItem(item.id)}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl shadow-glow">
+              <ShoppingCart className="h-6 w-6 text-white" />
             </div>
-
-            {cart.length === 0 && (
-              <div className="text-center py-12 text-gray-500">
-                <ShoppingCart className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>No items in cart. Scan a barcode to get started.</p>
-              </div>
-            )}
+            <div>
+              <h1 className="text-3xl font-bold">Point of Sale</h1>
+              <p className="text-muted-foreground">Process customer transactions efficiently</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <Badge variant="secondary" className="gap-1">
+              <Receipt className="h-3 w-3" />
+              {cart.length} items
+            </Badge>
+            <Button variant="outline" size="sm">
+              <Printer className="h-4 w-4 mr-2" />
+              Print Setup
+            </Button>
           </div>
         </div>
 
-        {/* Payment Summary */}
-        <div className="col-span-1">
-          <div className="bg-white rounded-lg shadow p-6 sticky top-6">
-            <h3 className="text-xl font-bold mb-4">Order Summary</h3>
-            
-            <div className="space-y-3 mb-6 pb-6 border-b">
-              <div className="flex justify-between">
-                <span>Subtotal:</span>
-                <span className="font-semibold">${subtotal.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Tax (10%):</span>
-                <span className="font-semibold">${tax.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-lg font-bold text-blue-600">
-                <span>Total:</span>
-                <span>${total.toFixed(2)}</span>
-              </div>
-            </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Checkout Area */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Barcode Scanner */}
+            <Card className="shadow-glow">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Search className="h-5 w-5" />
+                  Product Scanner
+                </CardTitle>
+                <CardDescription>
+                  Scan barcode or search for products to add to cart
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleBarcodeSubmit} className="space-y-4">
+                  <div className="flex gap-4">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="text"
+                        placeholder="Scan barcode or search product..."
+                        value={barcode}
+                        onChange={(e) => setBarcode(e.target.value)}
+                        className="pl-10 text-lg h-12"
+                        autoFocus
+                      />
+                    </div>
+                    <Button type="submit" size="lg" className="px-8">
+                      Add to Cart
+                    </Button>
+                  </div>
+                </form>
 
-            {/* Payment Method */}
-            <div className="mb-6">
-              <label className="block text-sm font-semibold mb-3">Payment Method</label>
-              <div className="space-y-2">
-                {(['card', 'cash', 'split'] as const).map(method => (
-                  <label key={method} className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="payment"
-                      value={method}
-                      checked={paymentMethod === method}
-                      onChange={(e) => setPaymentMethod(e.target.value as typeof method)}
-                      className="w-4 h-4"
-                    />
-                    <span className="capitalize">{method}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
+                {/* Quick Product Grid */}
+                <div className="mt-6">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-3">Quick Add</h3>
+                  <div className="grid grid-cols-4 gap-3">
+                    {['Milk', 'Bread', 'Eggs', 'Coffee'].map((product) => (
+                      <Button
+                        key={product}
+                        variant="outline"
+                        className="h-16 flex-col gap-1 hover:shadow-glow transition-all duration-300"
+                        onClick={() => {
+                          // TODO: Add product to cart
+                          setBarcode(product)
+                        }}
+                      >
+                        <Package className="h-4 w-4" />
+                        <span className="text-xs">{product}</span>
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Cart Items */}
+            <Card className="shadow-glow">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <ShoppingCart className="h-5 w-5" />
+                    Shopping Cart
+                  </span>
+                  {cart.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCart([])}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Clear Cart
+                    </Button>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {cart.length === 0 ? (
+                  <div className="text-center py-12">
+                    <ShoppingCart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">Your cart is empty</p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Add products by scanning barcodes or searching
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {cart.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                            <Package className="h-6 w-6 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-medium">{item.name}</p>
+                            <p className="text-sm text-muted-foreground">SKU: {item.sku}</p>
+                            <p className="text-sm font-medium">{formatCurrency(item.price)}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <span className="w-8 text-center font-medium">{item.quantity}</span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-medium">{formatCurrency(item.price * item.quantity)}</p>
+                            {item.discount > 0 && (
+                              <p className="text-xs text-green-600">-{formatCurrency(item.discount)}</p>
+                            )}
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRemoveItem(item.id)}
+                            className="text-destructive hover:text-destructive h-8 w-8 p-0"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Payment Sidebar */}
+          <div className="space-y-6">
+            {/* Order Summary */}
+            <Card className="shadow-glow">
+              <CardHeader>
+                <CardTitle>Order Summary</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span>{formatCurrency(subtotal)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Tax (10%)</span>
+                  <span>{formatCurrency(tax)}</span>
+                </div>
+                {cart.some(item => item.discount > 0) && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Discount</span>
+                    <span>-{formatCurrency(cart.reduce((sum, item) => sum + item.discount, 0))}</span>
+                  </div>
+                )}
+                <Separator />
+                <div className="flex justify-between text-lg font-bold">
+                  <span>Total</span>
+                  <span className="text-primary">{formatCurrency(total)}</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Payment Methods */}
+            <Card className="shadow-glow">
+              <CardHeader>
+                <CardTitle>Payment Method</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Tabs value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as any)}>
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="card" className="flex items-center gap-2">
+                      <CreditCard className="h-4 w-4" />
+                      Card
+                    </TabsTrigger>
+                    <TabsTrigger value="cash" className="flex items-center gap-2">
+                      <DollarSign className="h-4 w-4" />
+                      Cash
+                    </TabsTrigger>
+                    <TabsTrigger value="split" className="flex items-center gap-2">
+                      <Wallet className="h-4 w-4" />
+                      Split
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="card" className="space-y-4">
+                    <div className="space-y-3">
+                      <Input placeholder="Card number" className="h-12" />
+                      <div className="grid grid-cols-2 gap-3">
+                        <Input placeholder="MM/YY" />
+                        <Input placeholder="CVV" />
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="cash" className="space-y-4">
+                    <div className="space-y-3">
+                      <Input 
+                        type="number" 
+                        placeholder="Cash received" 
+                        className="h-12"
+                      />
+                      <div className="p-3 bg-muted rounded-lg">
+                        <p className="text-sm text-muted-foreground">Change due</p>
+                        <p className="text-lg font-bold text-green-600">{formatCurrency(0)}</p>
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="split" className="space-y-4">
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <Input type="number" placeholder="Card amount" />
+                        <Input type="number" placeholder="Cash amount" />
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
+
+            {/* Customer Info */}
+            <Card className="shadow-glow">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Customer
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <Input placeholder="Customer name or email" />
+                  <Button variant="outline" className="w-full">
+                    <User className="h-4 w-4 mr-2" />
+                    Add Customer
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Checkout Button */}
-            <button
-              onClick={handleCheckout}
+            <Button
+              size="lg"
+              className="w-full h-14 text-lg shadow-glow-lg hover:shadow-glow transition-all duration-300"
               disabled={cart.length === 0 || isProcessing}
-              className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition"
+              onClick={handleCheckout}
             >
-              <CreditCard className="w-5 h-5" />
-              {isProcessing ? 'Processing...' : 'Complete Sale'}
-            </button>
+              {isProcessing ? (
+                <div className="flex items-center gap-2">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                  Processing...
+                </div>
+              ) : (
+                <>
+                  <CreditCard className="h-5 w-5 mr-2" />
+                  Complete Sale - {formatCurrency(total)}
+                </>
+              )}
+            </Button>
 
-            {/* Offline Indicator */}
-            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
-              <p className="font-semibold">📱 Offline Mode</p>
-              <p>Changes will sync when online</p>
+            {/* Quick Actions */}
+            <div className="grid grid-cols-2 gap-3">
+              <Button variant="outline" className="h-12">
+                <Receipt className="h-4 w-4 mr-2" />
+                Receipt
+              </Button>
+              <Button variant="outline" className="h-12">
+                <Smartphone className="h-4 w-4 mr-2" />
+                Email
+              </Button>
             </div>
           </div>
         </div>

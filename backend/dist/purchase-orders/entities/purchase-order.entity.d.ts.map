@@ -1,1 +1,0 @@
-{"version":3,"file":"purchase-order.entity.d.ts","sourceRoot":"","sources":["../../../src/purchase-orders/entities/purchase-order.entity.ts"],"names":[],"mappings":"AAEA,qBACa,aAAa;IAExB,EAAE,EAAE,MAAM,CAAC;IAGX,SAAS,EAAE,MAAM,CAAC;IAGlB,SAAS,EAAE,MAAM,CAAC;IAGlB,WAAW,EAAE,MAAM,CAAC;IAGpB,sBAAsB,EAAE,IAAI,CAAC;IAG7B,MAAM,EAAE,MAAM,CAAC;IAGf,UAAU,EAAE,IAAI,CAAC;CAClB"}

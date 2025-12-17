@@ -15,7 +15,7 @@ interface AuthState {
   user: User | null
   token: string | null
   isLoading: boolean
-  isInitialized: boolean
+  _hasHydrated: boolean
   tenantId: string | null
   
   // Actions
@@ -27,6 +27,7 @@ interface AuthState {
   logout: () => void
   validateToken: () => Promise<void>
   initializeTenant: () => void
+  setHasHydrated: (state: boolean) => void
 }
 
 export const useAuth = create<AuthState>()(
@@ -35,7 +36,7 @@ export const useAuth = create<AuthState>()(
       user: null,
       token: null,
       isLoading: false,
-      isInitialized: false,
+      _hasHydrated: false,
       tenantId: null,
 
       setToken: (token: string) => {
@@ -61,7 +62,7 @@ export const useAuth = create<AuthState>()(
             token: access_token,
             user,
             tenantId: user.tenant_id,
-            isLoading: false 
+            isLoading: false
           })
           
           apiClient.setToken(access_token)
@@ -86,7 +87,7 @@ export const useAuth = create<AuthState>()(
         set({ 
           user: null, 
           token: null, 
-          tenantId: null 
+          tenantId: null
         })
         apiClient.clearToken()
       },
@@ -98,10 +99,9 @@ export const useAuth = create<AuthState>()(
         try {
           // TODO: Add token validation endpoint
           // For now, just check if token exists
-          set({ isInitialized: true })
+          console.log('Token validation completed')
         } catch (error) {
           get().logout()
-          set({ isInitialized: true })
         }
       },
 
@@ -117,6 +117,10 @@ export const useAuth = create<AuthState>()(
           set({ tenantId: newTenantId })
         }
       },
+
+      setHasHydrated: (state: boolean) => {
+        set({ _hasHydrated: state })
+      },
     }),
     {
       name: 'pos-auth-storage',
@@ -126,13 +130,15 @@ export const useAuth = create<AuthState>()(
         tenantId: state.tenantId,
       }),
       onRehydrateStorage: () => (state) => {
+        console.log('Starting rehydration...')
         if (state?.token) {
           apiClient.setToken(state.token)
         }
         state?.initializeTenant()
         if (state) {
-          state.isInitialized = true
+          state.setHasHydrated(true)
         }
+        console.log('Rehydration completed')
       },
     }
   )
