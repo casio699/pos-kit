@@ -59,7 +59,7 @@ let AuthService = class AuthService {
         this.jwtService = jwtService;
         this.rbacService = rbacService;
     }
-    async register(tenant_id, email, password, first_name, last_name) {
+    async register(tenant_id, email, password, first_name, last_name, role) {
         const hashedPassword = await bcrypt.hash(password, 10);
         const user = this.userRepo.create({
             tenant_id,
@@ -70,19 +70,33 @@ let AuthService = class AuthService {
             roles: ['user'],
         });
         const savedUser = await this.userRepo.save(user);
-        // Assign default 'viewer' role to new users
+        // Assign the selected role to new users
         try {
-            const viewerRole = await this.rbacService.getRoleByName('viewer', tenant_id);
-            if (viewerRole) {
-                await this.rbacService.assignRole(savedUser.id, viewerRole.id, tenant_id);
+            console.log(`Attempting to assign role: ${role} for tenant: ${tenant_id}`);
+            const selectedRole = await this.rbacService.getRoleByName(role, tenant_id);
+            console.log(`Found role: ${selectedRole ? selectedRole.name : 'null'}`);
+            if (selectedRole) {
+                await this.rbacService.assignRole(savedUser.id, selectedRole.id, tenant_id);
+                console.log(`Successfully assigned role ${role} to user ${savedUser.id}`);
+            }
+            else {
+                console.log(`Role ${role} not found, initializing default roles`);
+                await this.rbacService.initializeDefaultRoles(tenant_id);
+                const selectedRole = await this.rbacService.getRoleByName(role, tenant_id);
+                console.log(`After initialization, found role: ${selectedRole ? selectedRole.name : 'null'}`);
+                if (selectedRole) {
+                    await this.rbacService.assignRole(savedUser.id, selectedRole.id, tenant_id);
+                    console.log(`Successfully assigned role ${role} to user ${savedUser.id} after initialization`);
+                }
             }
         }
         catch (error) {
+            console.error(`Error assigning role ${role} to user ${savedUser.id}:`, error);
             // If roles aren't initialized, initialize them first
             await this.rbacService.initializeDefaultRoles(tenant_id);
-            const viewerRole = await this.rbacService.getRoleByName('viewer', tenant_id);
-            if (viewerRole) {
-                await this.rbacService.assignRole(savedUser.id, viewerRole.id, tenant_id);
+            const selectedRole = await this.rbacService.getRoleByName(role, tenant_id);
+            if (selectedRole) {
+                await this.rbacService.assignRole(savedUser.id, selectedRole.id, tenant_id);
             }
         }
         return savedUser;

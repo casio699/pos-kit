@@ -7,7 +7,7 @@ export declare class AuthService {
     private jwtService;
     private rbacService;
     constructor(userRepo: Repository<User>, jwtService: JwtService, rbacService: RbacService);
-    register(tenant_id: string, email: string, password: string, first_name: string, last_name: string): Promise<User>;
+    register(tenant_id: string, email: string, password: string, first_name: string, last_name: string, role: string): Promise<User>;
     login(email: string, password: string): Promise<{
         access_token: string;
         refresh_token: string;

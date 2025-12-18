@@ -1,6 +1,7 @@
 import { AuthService } from './auth.service';
 export declare class AuthController {
     private authService;
+    private readonly logger;
     constructor(authService: AuthService);
     register(body: any): Promise<import("./entities/user.entity").User>;
     login(body: {
